@@ -19,8 +19,6 @@ package cli
 import (
 	"github.com/masteryyh/micro-ddns/internal/version"
 	"github.com/spf13/cobra"
-	"log/slog"
-	"os"
 )
 
 var jsonFormat bool
@@ -29,15 +27,13 @@ var jsonFormat bool
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information about micro-ddns.",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if jsonFormat {
-			if err := version.PrintVersionJson(); err != nil {
-				slog.Error("error when printing version in JSON: ", err)
-				os.Exit(1)
-			}
-		} else {
-			version.PrintVersionNormal()
+			return version.PrintVersionJson()
 		}
+
+		version.PrintVersionNormal()
+		return nil
 	},
 }
 
