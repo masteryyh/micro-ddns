@@ -24,28 +24,34 @@ import (
 	"strings"
 )
 
-var config *Config
+var config Config
 
 type NetworkStack string
 
 const (
-	IPv4 NetworkStack = "ipv4"
-	IPv6 NetworkStack = "ipv6"
+	IPv4 NetworkStack = "IPv4"
+	IPv6 NetworkStack = "IPv6"
 )
 
 type AddressDetectionType string
 
 const (
-	NetworkInterface  AddressDetectionType = "interface"
-	ThirdPartyService AddressDetectionType = "third-party-service"
+	AddressDetectionIface      AddressDetectionType = "Interface"
+	AddressDetectionThirdParty AddressDetectionType = "ThirdParty"
 )
 
 type LocalAddressPolicy string
 
 const (
-	Denied      LocalAddressPolicy = "denied"
-	Allowed     LocalAddressPolicy = "allowed"
-	Prioritized LocalAddressPolicy = "prioritized"
+	LocalAddressPolicyIgnore LocalAddressPolicy = "Ignore"
+	LocalAddressPolicyAllow  LocalAddressPolicy = "Allow"
+	LocalAddressPolicyPrefer LocalAddressPolicy = "Prefer"
+)
+
+type DNSProvider string
+
+const (
+	DNSProviderCloudflare DNSProvider = "Cloudflare"
 )
 
 // CloudflareSpec is the information of Cloudflare API credential
@@ -64,7 +70,7 @@ type CloudflareSpec struct {
 // is supported
 type DNSProviderSpec struct {
 	// Name is the name of DNS provider
-	Name string `json:"name" yaml:"name"`
+	Name DNSProvider `json:"name" yaml:"name"`
 
 	Cloudflare *CloudflareSpec `json:"cloudflare,omitempty" yaml:"cloudflare,omitempty"`
 }
@@ -74,12 +80,6 @@ type DNSProviderSpec struct {
 type NetworkInterfaceDetectionSpec struct {
 	// Name is the name of interface
 	Name string `json:"name" yaml:"name"`
-
-	// LocalAddressPolicy defines how should we process addresses
-	// Denied means the operation would fail when no public address presents on the interface
-	// Allowed means local addresses will be used for DNS record, but only if no public address presents on the interface
-	// Prioritized means local addresses will be used for DNS record even public address presents on the interface
-	LocalAddressPolicy *LocalAddressPolicy `json:"localAddressPolicy,omitempty" yaml:"localAddressPolicy,omitempty"`
 }
 
 // ThirdPartyServiceSpec defines how should we access third party API to get our IP address
@@ -90,8 +90,11 @@ type ThirdPartyServiceSpec struct {
 	// JsonPath is the path to the address if data returned by API is JSON-formatted
 	JsonPath *string `json:"jsonPath,omitempty" yaml:"jsonPath,omitempty"`
 
-	// CustomHeaders will be added to the request header if not empty
-	CustomHeaders *map[string]string `json:"customHeaders,omitempty" yaml:"customHeaders,omitempty"`
+	// Params will be added to the URL
+	Params *map[string]string `json:"params,omitempty" yaml:"params,omitempty"`
+
+	// Headers will be added to the request header if not empty
+	Headers *map[string]string `json:"customHeaders,omitempty" yaml:"customHeaders,omitempty"`
 
 	// Username is the username for HTTP basic authentication if required
 	Username *string `json:"username,omitempty" yaml:"username,omitempty"`
@@ -105,6 +108,12 @@ type AddressDetectionSpec struct {
 	// Type is the type of address detection method
 	// Currently we can acquire address by network interface or 3rd-party API
 	Type AddressDetectionType `json:"type" yaml:"type"`
+
+	// LocalAddressPolicy defines how should we process addresses
+	// LocalAddressPolicyIgnore means the operation would fail when no public address presents on the interface
+	// LocalAddressPolicyAllow means local addresses will be used for DNS record, but only if no public address presents on the interface
+	// LocalAddressPolicyPrefer means local addresses will be used for DNS record even public address presents on the interface
+	LocalAddressPolicy *LocalAddressPolicy `json:"localAddressPolicy,omitempty" yaml:"localAddressPolicy,omitempty"`
 
 	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
 
@@ -130,17 +139,17 @@ type DDNSSpec struct {
 
 	Detection AddressDetectionSpec `json:"detection" yaml:"detection"`
 
-	Provider DNSProviderSpec `json:"provider" yaml:"provider"`
+	DNS DNSProviderSpec `json:"dns" yaml:"dns"`
 }
 
 // Config is the configuration of this application
 type Config struct {
-	DDNS []DDNSSpec `json:"ddns" yaml:"ddns"`
+	DDNS []*DDNSSpec `json:"ddns,omitempty" yaml:"ddns,omitempty"`
 }
 
 func ReadConfigOrGet(path string) (*Config, error) {
-	if config != nil {
-		return config, nil
+	if len(config.DDNS) > 0 {
+		return &config, nil
 	}
 
 	info, err := os.Stat(path)
@@ -165,16 +174,16 @@ func ReadConfigOrGet(path string) (*Config, error) {
 	fileType := parts[len(parts)-1]
 	switch fileType {
 	case "yaml", "yml":
-		if err := yaml.Unmarshal(content, config); err != nil {
+		if err := yaml.Unmarshal(content, &config); err != nil {
 			return nil, err
 		}
 	case "json":
-		if err := json.Unmarshal(content, config); err != nil {
+		if err := json.Unmarshal(content, &config); err != nil {
 			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("config path points to an unknown file type")
 	}
 
-	return config, nil
+	return &config, nil
 }

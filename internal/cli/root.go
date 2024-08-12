@@ -49,5 +49,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().IntVarP(&logLevel, "verbose", "v",
-		4, "log level, available options are -4 (DEBUG), 0 (INFO), 4 (WARN) and 8 (ERROR)")
+		0, "log level, available options are -4 (DEBUG), 0 (INFO), 4 (WARN) and 8 (ERROR)")
 }
