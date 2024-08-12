@@ -18,7 +18,7 @@ package cli
 
 import (
 	"fmt"
-	"github.com/masteryyh/micro-ddns/internal/config"
+	"github.com/masteryyh/micro-ddns/internal/app"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +34,11 @@ var (
 				return fmt.Errorf("no config file specified")
 			}
 
-			if _, err := config.ReadConfigOrGet(configFile); err != nil {
+			a, err := app.NewApp(logLevel, configFile)
+			if err != nil {
 				return err
 			}
-
-			return nil
+			return a.Run()
 		},
 	}
 )
