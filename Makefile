@@ -54,4 +54,4 @@ build-image: build
 	$(DOCKER) push $(IMG):latest
 
 
-.PHONY: all clean build build-image push
+.PHONY: all clean build build-image
