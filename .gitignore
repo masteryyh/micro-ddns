@@ -26,4 +26,8 @@ go.work.sum
 
 build/
 
+# Ignore test config.yaml
 config.yaml
+
+# GoLand configs
+.idea/
