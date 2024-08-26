@@ -23,7 +23,6 @@ const (
 	AAAA RecordType = "AAAA"
 
 	PerPageCount = 500
-	TTL          = 120
 )
 
 type DNSUpdateHandler interface {
