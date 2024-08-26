@@ -52,7 +52,23 @@ type DNSProvider string
 
 const (
 	DNSProviderCloudflare DNSProvider = "Cloudflare"
+	DNSProviderAliCloud   DNSProvider = "AliCloud"
 )
+
+// AliCloudSpec is the information of AliCloud API credential
+type AliCloudSpec struct {
+	// AccessKeyID is the AccessKey of the account
+	AccessKeyID string `json:"accessKeyId" yaml:"accessKeyId"`
+
+	// AccessKeySecret is the AccessKeySecret of the account
+	AccessKeySecret string `json:"accessKeySecret" yaml:"accessKeySecret"`
+
+	// RegionID is the region of the domain
+	RegionID string `json:"regionId" yaml:"regionId"`
+
+	// Line is the resolve line of the record
+	Line *string `json:"line,omitempty" yaml:"line,omitempty"`
+}
 
 // CloudflareSpec is the information of Cloudflare API credential
 type CloudflareSpec struct {
@@ -73,6 +89,8 @@ type DNSProviderSpec struct {
 	Name DNSProvider `json:"name" yaml:"name"`
 
 	Cloudflare *CloudflareSpec `json:"cloudflare,omitempty" yaml:"cloudflare,omitempty"`
+
+	AliCloud *AliCloudSpec `json:"alicloud,omitempty" yaml:"alicloud,omitempty"`
 }
 
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface

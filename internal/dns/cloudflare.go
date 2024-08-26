@@ -27,9 +27,7 @@ import (
 )
 
 const (
-	PerPageCount = 500
-	TTL          = 120
-	Comment      = "Created by micro-ddns"
+	Comment = "Created by micro-ddns"
 )
 
 type CloudflareDNSUpdateHandler struct {
