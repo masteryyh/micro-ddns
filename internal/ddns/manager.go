@@ -25,7 +25,7 @@ import (
 )
 
 type DDNSInstanceManager struct {
-	instances []*DDNSInstance
+	instances map[string]*DDNSInstance
 	specs     []*config.DDNSSpec
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -41,15 +41,20 @@ func NewDDNSInstanceManager(parentCtx context.Context, specs []*config.DDNSSpec,
 		return nil, fmt.Errorf("no ddns specs provided")
 	}
 
-	var instances []*DDNSInstance
+	instances := make(map[string]*DDNSInstance, len(specs))
 	for _, spec := range specs {
+		if _, ok := instances[spec.Name]; ok {
+			cancel()
+			return nil, fmt.Errorf("DDNS instance %s already exists", spec.Name)
+		}
+
 		instanceLogger := logger.With(slog.Group("component", "type", "instance", "name", spec.Name))
 		instance, err := NewDDNSInstance(spec, ctx, instanceLogger)
 		if err != nil {
 			cancel()
 			return nil, err
 		}
-		instances = append(instances, instance)
+		instances[spec.Name] = instance
 	}
 
 	return &DDNSInstanceManager{
@@ -63,22 +68,22 @@ func NewDDNSInstanceManager(parentCtx context.Context, specs []*config.DDNSSpec,
 }
 
 func (m *DDNSInstanceManager) Start() error {
-	for i := 0; i < len(m.specs); i++ {
-		m.logger.Info("registering ddns task", "name", m.specs[i].Name)
-		job, err := m.scheduler.NewJob(gocron.CronJob(m.specs[i].Cron, false), gocron.NewTask(func() {
-			err := m.instances[i].DoUpdate()
+	for name, instance := range m.instances {
+		m.logger.Info("registering DDNS task", "name", name)
+		job, err := m.scheduler.NewJob(gocron.CronJob(instance.spec.Cron, false), gocron.NewTask(func(instance *DDNSInstance) {
+			err := instance.DoUpdate()
 			if err != nil {
-				m.logger.Error("failed to handle DNS update", "name", m.specs[i].Name, "err", err)
+				m.logger.Error("failed to handle DNS update", "name", instance.spec.Name, "err", err)
 				return
 			}
-			m.logger.Info("successfully updated DNS record", "name", m.specs[i].Name)
-		}))
+			m.logger.Info("successfully updated DNS record", "name", instance.spec.Name)
+		}, instance))
 		if err != nil {
-			m.logger.Error("failed to create job for %s, err: %v", m.specs[i].Name, err)
+			m.logger.Error("failed to create job", "name", name, "err", err)
 			return err
 		}
 
-		m.logger.Info("created cron job", "name", m.specs[i].Name, "id", job.ID().String())
+		m.logger.Info("created cron job", "name", name, "id", job.ID().String())
 	}
 
 	m.scheduler.Start()
