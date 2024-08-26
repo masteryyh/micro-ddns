@@ -16,6 +16,16 @@ limitations under the License.
 
 package dns
 
+type RecordType string
+
+const (
+	A    RecordType = "A"
+	AAAA RecordType = "AAAA"
+
+	PerPageCount = 500
+	TTL          = 120
+)
+
 type DNSUpdateHandler interface {
 	// Get will get current IP address registered in DNS record
 	Get() (string, error)
