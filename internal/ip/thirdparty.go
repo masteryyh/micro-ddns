@@ -162,11 +162,11 @@ func (d *ThirdPartyAddressDetector) detectV4() (string, error) {
 		return "", err
 	}
 
-	if !validateAddressV4(val) {
+	if !IsValidV4(val) {
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if isPrivateV4(val) {
+	if IsPrivate(val) {
 		if d.localAddressPolicy == config.LocalAddressPolicyIgnore {
 			return "", fmt.Errorf("local address is ignored: %s", val)
 		}
@@ -181,11 +181,11 @@ func (d *ThirdPartyAddressDetector) detectV6() (string, error) {
 		return "", err
 	}
 
-	if !validateAddressV6(val) {
+	if !IsValidV6(val) {
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if isULA(val) {
+	if IsPrivate(val) {
 		if d.localAddressPolicy == config.LocalAddressPolicyIgnore {
 			return "", fmt.Errorf("ULA address is ignored: %s", val)
 		}
