@@ -21,6 +21,7 @@ import (
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"log/slog"
 	"net"
+	"strings"
 )
 
 type IfaceAddressDetector struct {
@@ -67,14 +68,14 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 
 	var privateIPs, publicIPs []string
 	for _, addr := range addrs {
-		address := addr.String()
+		address := strings.Split(addr.String(), "/")[0]
 		if v4 {
-			if !validateAddressV4(address) || isLoopbackV4(address) {
+			if !IsValidV4(address) {
 				d.logger.Debug("ignoring invalid address", "address", address)
 				continue
 			}
 
-			if isPrivateV4(address) {
+			if IsPrivate(address) {
 				d.logger.Debug("saving private IPv4 address", "address", address)
 				privateIPs = append(privateIPs, address)
 				continue
@@ -82,13 +83,13 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 			d.logger.Debug("saving public IPv4 address", "address", address)
 			publicIPs = append(publicIPs, address)
 		} else {
-			if !validateAddressV6(address) || isInvalidV6(address) {
+			if !IsValidV6(address) {
 				d.logger.Debug("ignoring invalid address", "address", address)
 				continue
 			}
 
-			if isULA(address) {
-				d.logger.Debug("saving ULA address", "address", address)
+			if IsPrivate(address) {
+				d.logger.Debug("saving private IPv6 address", "address", address)
 				privateIPs = append(privateIPs, address)
 				continue
 			}

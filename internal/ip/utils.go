@@ -18,123 +18,40 @@ package ip
 
 import (
 	"net"
-	"regexp"
+	"strings"
 )
 
-const (
-	ipv4RegexString = `^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$`
-	ipv6RegexString = `^^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4}|:)|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]).){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]).){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$`
-)
-
-var (
-	ipv4Regex = regexp.MustCompile(ipv4RegexString)
-	ipv6Regex = regexp.MustCompile(ipv6RegexString)
-
-	ipv4InvalidBlocksString = []string{
-		"0.0.0.0/8",
-		"127.0.0.0/8",
-		"255.255.255.255/32",
-	}
-	ipv4PrivateBlocksString = []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-		"169.254.0.0/16",
-		"198.18.0.0/15",
-	}
-
-	ipv6InvalidBlocksString = []string{
-		"::/128",
-		"::1/128",
-		"fe80::/10",
-		"ff00::/8",
-	}
-	ipv6PrivateBlocksString = []string{
-		"fc00::/7",
-	}
-
-	ipv4InvalidBlocks []*net.IPNet
-	ipv4PrivateBlocks []*net.IPNet
-	ipv6InvalidBlocks []*net.IPNet
-	ipv6PrivateBlocks []*net.IPNet
-)
-
-func init() {
-	for _, block := range ipv4PrivateBlocksString {
-		if _, cidr, err := net.ParseCIDR(block); err == nil {
-			ipv4PrivateBlocks = append(ipv4PrivateBlocks, cidr)
-		}
-	}
-
-	for _, block := range ipv4InvalidBlocksString {
-		if _, cidr, err := net.ParseCIDR(block); err == nil {
-			ipv4InvalidBlocks = append(ipv4InvalidBlocks, cidr)
-		}
-	}
-
-	for _, block := range ipv6InvalidBlocksString {
-		if _, cidr, err := net.ParseCIDR(block); err == nil {
-			ipv6InvalidBlocks = append(ipv6InvalidBlocks, cidr)
-		}
-	}
-
-	for _, block := range ipv6PrivateBlocksString {
-		if _, cidr, err := net.ParseCIDR(block); err == nil {
-			ipv6PrivateBlocks = append(ipv6PrivateBlocks, cidr)
-		}
-	}
-}
-
-func validateAddressV4(address string) bool {
-	if !ipv4Regex.MatchString(address) {
+func validateAddress(address string) bool {
+	ip := net.ParseIP(address)
+	if ip == nil {
 		return false
 	}
-	return !isLoopbackV4(address)
+
+	return !ip.IsLoopback() &&
+		!ip.IsMulticast() &&
+		!ip.IsUnspecified() &&
+		!ip.IsInterfaceLocalMulticast() &&
+		!ip.IsLinkLocalUnicast()
 }
 
-func isLoopbackV4(address string) bool {
+func IsPrivate(address string) bool {
 	ip := net.ParseIP(address)
-	for _, block := range ipv4InvalidBlocks {
-		if block.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-func isPrivateV4(address string) bool {
-	ip := net.ParseIP(address)
-	for _, block := range ipv4PrivateBlocks {
-		if block.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-func isInvalidV6(address string) bool {
-	ip := net.ParseIP(address)
-	for _, block := range ipv6InvalidBlocks {
-		if block.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-func isULA(address string) bool {
-	ip := net.ParseIP(address)
-	for _, block := range ipv6PrivateBlocks {
-		if block.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-func validateAddressV6(address string) bool {
-	if ip := net.ParseIP(address); ip == nil {
+	if ip == nil {
 		return false
 	}
-	return !isInvalidV6(address)
+	return ip.IsPrivate()
+}
+
+func IsValidV4(address string) bool {
+	if strings.Contains(address, ":") {
+		return false
+	}
+	return validateAddress(address)
+}
+
+func IsValidV6(address string) bool {
+	if strings.Count(address, ":") < 2 {
+		return false
+	}
+	return validateAddress(address)
 }
