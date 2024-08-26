@@ -39,3 +39,15 @@ func BoolPtr(v bool) *bool {
 	*ptr = v
 	return ptr
 }
+
+func Int64Ptr(v int64) *int64 {
+	ptr := new(int64)
+	*ptr = v
+	return ptr
+}
+
+func StringPtr(v string) *string {
+	ptr := new(string)
+	*ptr = v
+	return ptr
+}

@@ -39,7 +39,8 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	var handler dns.DNSUpdateHandler
-	if ddnsSpec.DNS.Name == config.DNSProviderCloudflare {
+	switch ddnsSpec.DNS.Name {
+	case config.DNSProviderCloudflare:
 		spec := ddnsSpec.DNS.Cloudflare
 		h, err := dns.NewCloudflareDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
 		if err != nil {
@@ -47,7 +48,15 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 			return nil, err
 		}
 		handler = h
-	} else {
+	case config.DNSProviderAliCloud:
+		spec := ddnsSpec.DNS.AliCloud
+		h, err := dns.NewAliCloudDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		handler = h
+	default:
 		cancel()
 		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.DNS.Name)
 	}
