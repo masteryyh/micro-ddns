@@ -4,10 +4,7 @@ ifeq ($(DOCKER), "docker not found")
 	$(error Docker is needed for build, exiting.)
 endif
 
-ifeq ($(OS), Windows_NT)
-	FILE_PREFIX = ".exe"
-endif
-OUTPUT_PATH = "build/micro-ddns$(FILE_PREFIX)"
+OUTPUT_PATH = "build/micro-ddns"
 
 GO ?= $(shell which go)
 ifeq ($(GO), "go not found")
