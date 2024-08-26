@@ -11,6 +11,8 @@ ifeq ($(GO), "go not found")
 	$(error Golang SDK not detected, exiting.)
 endif
 
+USE_CN_MIRROR ?= ""
+
 VERSION ?= "0.0.1"
 IMG ?= "docker.io/masteryyh/micro-ddns"
 TAG ?= $(VERSION)
@@ -44,7 +46,7 @@ build:
 
 build-image: build
 	@echo "Building Docker images..."
-	$(DOCKER) build -t $(IMG):$(TAG) .
+	$(DOCKER) build -t $(IMG):$(TAG) --build-arg USE_CN_MIRROR=$(USE_CN_MIRROR) .
 	$(DOCKER) tag $(IMG):$(TAG) $(IMG):latest
 	@echo "Pushing images to Docker Hub..."
 	$(DOCKER) push $(IMG):$(TAG)
