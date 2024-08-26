@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	Comment = "Created by micro-ddns"
+	Comment              = "Created by micro-ddns"
+	CloudflareDefaultTTL = 120
 )
 
 type CloudflareDNSUpdateHandler struct {
@@ -200,7 +201,7 @@ func (h *CloudflareDNSUpdateHandler) Create(address string) error {
 			Name:    h.subdomain,
 			Content: address,
 			ZoneID:  h.zoneId,
-			TTL:     TTL,
+			TTL:     CloudflareDefaultTTL,
 			Proxied: utils.BoolPtr(false),
 			Comment: Comment,
 		})
@@ -230,7 +231,7 @@ func (h *CloudflareDNSUpdateHandler) Update(newAddress string) error {
 		Type:    string(h.recordType),
 		Name:    h.subdomain,
 		Content: newAddress,
-		TTL:     TTL,
+		TTL:     CloudflareDefaultTTL,
 		Proxied: utils.BoolPtr(false),
 	})
 	return err

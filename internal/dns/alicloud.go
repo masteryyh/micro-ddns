@@ -27,6 +27,10 @@ import (
 	"time"
 )
 
+const (
+	AliCloudDefaultTTL = 600
+)
+
 type AliCloudDNSUpdateHandler struct {
 	domain     string
 	subdomain  string
@@ -102,6 +106,11 @@ func (h *AliCloudDNSUpdateHandler) Get() (string, error) {
 		return "", err
 	}
 
+	if *result.Body.TotalCount == 0 {
+		h.logger.Debug("no record with subdomain " + h.subdomain + " found")
+		return "", nil
+	}
+
 	thisPageCount := (int)(*result.Body.PageSize)
 	for i := 0; i < thisPageCount; i++ {
 		record := result.Body.DomainRecords.Record[i]
@@ -150,14 +159,14 @@ func (h *AliCloudDNSUpdateHandler) Get() (string, error) {
 }
 
 func (h *AliCloudDNSUpdateHandler) Create(address string) error {
-	h.logger.Debug("creating record for address" + address)
+	h.logger.Debug("creating record for address " + address)
 	result, err := h.client.AddDomainRecord(&alidns.AddDomainRecordRequest{
 		DomainName: &h.domain,
 		RR:         &h.subdomain,
 		Type:       utils.StringPtr(string(h.recordType)),
 		Value:      &address,
 		Line:       &h.line,
-		TTL:        utils.Int64Ptr(TTL),
+		TTL:        utils.Int64Ptr(AliCloudDefaultTTL),
 	})
 	if err != nil {
 		return err
@@ -180,7 +189,7 @@ func (h *AliCloudDNSUpdateHandler) Update(newAddress string) error {
 		Type:     utils.StringPtr(string(h.recordType)),
 		Value:    &newAddress,
 		Line:     &h.line,
-		TTL:      utils.Int64Ptr(TTL),
+		TTL:      utils.Int64Ptr(AliCloudDefaultTTL),
 	})
 	return err
 }
