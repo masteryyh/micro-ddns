@@ -19,7 +19,7 @@ TAG ?= $(VERSION)
 
 BUILD_TIME = $(shell date --iso=seconds)
 
-GO_VERSION = "go1.22.6"
+GO_VERSION = "go1.23.0"
 
 COMMIT_HASH = $(shell git rev-parse HEAD)
 
