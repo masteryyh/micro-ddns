@@ -109,6 +109,8 @@ func (h *DNSPodDNSUpdateHandler) findDomainId() error {
 		}
 
 		for i := 1; i <= pages; i++ {
+			time.Sleep(500 * time.Millisecond)
+
 			pageCtx, pageCancel := context.WithTimeout(h.ctx, 30*time.Second)
 			pageResult, err := h.client.DescribeDomainListWithContext(pageCtx, &dnspod.DescribeDomainListRequest{
 				Keyword: &h.domain,
@@ -172,6 +174,8 @@ func (h *DNSPodDNSUpdateHandler) findRecordId() (string, error) {
 		}
 
 		for i := 1; i <= pages; i++ {
+			time.Sleep(500 * time.Millisecond)
+
 			pageCtx, pageCancel := context.WithTimeout(h.ctx, 30*time.Second)
 			pageResult, err := h.client.DescribeRecordListWithContext(pageCtx, &dnspod.DescribeRecordListRequest{
 				DomainId:     h.domainId,
