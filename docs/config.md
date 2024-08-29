@@ -70,6 +70,8 @@ ddns:
 | `ddns.dns.alicloud`                 | object | Credentials and settings for AliCloud DNS provider.                                                                                      |
 | `ddns.dns.alicloud.accessKeyId`     | string | AccessKeyId of your AliCloud account. You can create a RAM sub user to limit permission of this access key.                              |
 | `ddns.dns.alicloud.accessKeySecret` | string | AccessKeySecret of your AliCloud account.                                                                                                |
+| `ddns.dns.alicloud.regionId`        | string | Region ID of your resources.                                                                                                             |
+| `ddns.dns.alicloud.line`            | string | (Optional) Line of the DNS record.                                                                                                       |
 | `ddns.dns.dnspod`                   | object | Credentials and settings for DNSPod DNS provider.                                                                                        |
 | `ddns.dns.dnspod.secretId`          | string | SecretID of your Tencent Cloud account.                                                                                                  |
 | `ddns.dns.dnspod.secretKey`         | string | SecretKey of your Tencent Cloud account                                                                                                  |
