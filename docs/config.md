@@ -57,10 +57,10 @@ ddns:
 | `ddns.detection.interface.name`     | string | Interface to read address from.                                                                                                          |
 | `ddns.detection.api`                | object | Third-party API detection specification.                                                                                                 |
 | `ddns.detection.api.url`            | string | 3rd-party API URL.                                                                                                                       |
-| `ddns.detection.api.customHeaders`  | object | Custom headers that adds into requests to 3rd-party API.                                                                                 |
-| `ddns.detection.api.params`         | object | Custom params that appends to API URL.                                                                                                   |
-| `ddns.detection.api.username`       | string | API authentication username.                                                                                                             |
-| `ddns.detection.api.password`       | string | API authentication password.                                                                                                             |
+| `ddns.detection.api.customHeaders`  | object | (Optional) Custom headers that adds into requests to 3rd-party API.                                                                      |
+| `ddns.detection.api.params`         | object | (Optional) Custom params that appends to API URL.                                                                                        |
+| `ddns.detection.api.username`       | string | (Optional) API authentication username.                                                                                                  |
+| `ddns.detection.api.password`       | string | (Optional) API authentication password.                                                                                                  |
 | `ddns.dns`                          | object | DNS provider specification.                                                                                                              |
 | `ddns.dns.name`                     | string | DNS provider name. Currently Cloudflare and AliCloud are supported.                                                                      |
 | `ddns.dns.cloudflare`               | object | Credentials and settings for Cloudflare DNS provider.                                                                                    |
