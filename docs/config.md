@@ -62,7 +62,7 @@ ddns:
 | `ddns.detection.api.username`       | string | (Optional) API authentication username.                                                                                                  |
 | `ddns.detection.api.password`       | string | (Optional) API authentication password.                                                                                                  |
 | `ddns.dns`                          | object | DNS provider specification.                                                                                                              |
-| `ddns.dns.name`                     | string | DNS provider name. Currently Cloudflare and AliCloud are supported.                                                                      |
+| `ddns.dns.name`                     | string | DNS provider name. Currently Cloudflare, AliCloud and DNSPod are supported.                                                              |
 | `ddns.dns.cloudflare`               | object | Credentials and settings for Cloudflare DNS provider.                                                                                    |
 | `ddns.dns.cloudflare.apiToken`      | string | Fine-grained API token for Cloudflare, recommended as this can limit permissions for a specific token.                                   |
 | `ddns.dns.cloudflare.globalApiKey`  | string | Global API key for Cloudflare, not recommended as this key has full power to access your Cloudflare account and resources.               |
@@ -70,4 +70,8 @@ ddns:
 | `ddns.dns.alicloud`                 | object | Credentials and settings for AliCloud DNS provider.                                                                                      |
 | `ddns.dns.alicloud.accessKeyId`     | string | AccessKeyId of your AliCloud account. You can create a RAM sub user to limit permission of this access key.                              |
 | `ddns.dns.alicloud.accessKeySecret` | string | AccessKeySecret of your AliCloud account.                                                                                                |
-
+| `ddns.dns.dnspod`                   | object | Credentials and settings for DNSPod DNS provider.                                                                                        |
+| `ddns.dns.dnspod.secretId`          | string | SecretID of your Tencent Cloud account.                                                                                                  |
+| `ddns.dns.dnspod.secretKey`         | string | SecretKey of your Tencent Cloud account                                                                                                  |
+| `ddns.dns.dnspod.region`            | string | Region of your resources.                                                                                                                |
+| `ddns.dns.dnspod.lineId`            | string | (Optional) ID of the line of your DNS record.                                                                                            |
