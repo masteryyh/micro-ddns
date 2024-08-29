@@ -51,3 +51,9 @@ func StringPtr(v string) *string {
 	*ptr = v
 	return ptr
 }
+
+func Uint64Ptr(v uint64) *uint64 {
+	ptr := new(uint64)
+	*ptr = v
+	return ptr
+}

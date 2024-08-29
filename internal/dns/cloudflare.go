@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	Comment              = "Created by micro-ddns"
 	CloudflareDefaultTTL = 120
 )
 

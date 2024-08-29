@@ -56,6 +56,14 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 			return nil, err
 		}
 		handler = h
+	case config.DNSProviderDNSPod:
+		spec := ddnsSpec.DNS.DNSPod
+		h, err := dns.NewDNSPodDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		handler = h
 	default:
 		cancel()
 		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.DNS.Name)

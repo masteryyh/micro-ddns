@@ -9,6 +9,8 @@ require (
 	github.com/go-co-op/gocron/v2 v2.11.0
 	github.com/itchyny/gojq v0.12.16
 	github.com/spf13/cobra v1.8.1
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.993
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.993
 	gopkg.in/yaml.v3 v3.0.1
 )
 
