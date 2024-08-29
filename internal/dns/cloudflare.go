@@ -134,6 +134,8 @@ func (h *CloudflareDNSUpdateHandler) Get() (string, error) {
 			}
 
 			for i := 0; i < pages; i++ {
+				time.Sleep(500 * time.Millisecond)
+
 				additionalRecordCtx, additionalRecordCancel := context.WithTimeout(ctx, time.Second*30)
 				additionalRecords, _, err := h.apiClient.ListDNSRecords(additionalRecordCtx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.ListDNSRecordsParams{
 					Type: string(h.recordType),

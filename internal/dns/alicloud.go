@@ -132,6 +132,7 @@ func (h *AliCloudDNSUpdateHandler) Get() (string, error) {
 		}
 
 		for i := 1; i <= pages; i++ {
+			time.Sleep(500 * time.Millisecond)
 			recordsResult, err := h.client.DescribeDomainRecords(&alidns.DescribeDomainRecordsRequest{
 				DomainName: &h.domain,
 				RRKeyWord:  &h.subdomain,
