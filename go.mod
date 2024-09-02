@@ -9,6 +9,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.11.0
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.112
 	github.com/itchyny/gojq v0.12.16
+	github.com/jdcloud-api/jdcloud-sdk-go v1.62.0
 	github.com/spf13/cobra v1.8.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.993
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.993
@@ -26,6 +27,7 @@ require (
 	github.com/aliyun/credentials-go v1.3.8 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
