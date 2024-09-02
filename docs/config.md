@@ -69,7 +69,7 @@ ddns:
 | Name                                     | Type   | Description                                                                                                                |
 |------------------------------------------|--------|----------------------------------------------------------------------------------------------------------------------------|
 | `ddns.provider`                          | object | DNS provider specification.                                                                                                |
-| `ddns.provider.name`                     | string | DNS provider name. Currently Cloudflare, AliCloud and DNSPod are supported.                                                |
+| `ddns.provider.name`                     | string | DNS provider name. Currently `Cloudflare`, `AliCloud`, `DNSPod`, `HuaweiCloud` and `JDCloud` are supported.                |
 | `ddns.provider.cloudflare`               | object | Credentials and settings for Cloudflare DNS provider.                                                                      |
 | `ddns.provider.cloudflare.apiToken`      | string | Fine-grained API token for Cloudflare, recommended as this can limit permissions for a specific token.                     |
 | `ddns.provider.cloudflare.globalApiKey`  | string | Global API key for Cloudflare, not recommended as this key has full power to access your Cloudflare account and resources. |
