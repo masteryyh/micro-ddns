@@ -8,7 +8,7 @@ ddns:
       type: ThirdParty
       api:
         url: https://api.ipify.org/
-    dns:
+    provider:
       name: Cloudflare
       cloudflare:
         apiToken: "<redacted>"
@@ -21,7 +21,7 @@ ddns:
       type: ThirdParty
       api:
         url: https://api6.ipify.org/
-    dns:
+    provider:
       name: Cloudflare
       cloudflare:
         apiToken: "<redacted>"

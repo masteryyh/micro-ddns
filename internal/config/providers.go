@@ -69,3 +69,18 @@ type HuaweiCloudSpec struct {
 	// Region is the region of resources, this decides the endpoint of the API
 	Region string `json:"region" yaml:"region"`
 }
+
+// JDCloudSpec is the information of JDCloud credential and settings
+type JDCloudSpec struct {
+	// AccessKey is the access key of the account
+	AccessKey string `json:"accessKey" yaml:"accessKey"`
+
+	// SecretKey is the secret key of the account
+	SecretKey string `json:"secretKey" yaml:"secretKey"`
+
+	// Region is the region of resources, leave it empty for default value cn-north-1
+	RegionID *string `json:"regionId,omitempty" yaml:"regionId,omitempty"`
+
+	// ViewID is the resolve line ID of the DNS record, leave it empty for default value -1
+	ViewID *int `json:"viewId,omitempty" yaml:"viewId,omitempty"`
+}
