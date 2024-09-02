@@ -55,6 +55,7 @@ const (
 	DNSProviderAliCloud    DNSProvider = "AliCloud"
 	DNSProviderDNSPod      DNSProvider = "DNSPod"
 	DNSProviderHuaweiCloud DNSProvider = "HuaweiCloud"
+	DNSProviderJDCloud     DNSProvider = "JDCloud"
 )
 
 // DNSProviderSpec is the specification of DNS provider, currently only Cloudflare
@@ -70,6 +71,8 @@ type DNSProviderSpec struct {
 	DNSPod *DNSPodSpec `json:"dnspod,omitempty" yaml:"dnspod,omitempty"`
 
 	Huawei *HuaweiCloudSpec `json:"huawei,omitempty" yaml:"huawei,omitempty"`
+
+	JD *JDCloudSpec `json:"jd,omitempty" yaml:"jd,omitempty"`
 }
 
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface
@@ -136,7 +139,7 @@ type DDNSSpec struct {
 
 	Detection AddressDetectionSpec `json:"detection" yaml:"detection"`
 
-	DNS DNSProviderSpec `json:"dns" yaml:"dns"`
+	Provider DNSProviderSpec `json:"provider" yaml:"provider"`
 }
 
 // Config is the configuration of this application

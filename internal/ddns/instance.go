@@ -39,9 +39,9 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	var handler dns.DNSUpdateHandler
-	switch ddnsSpec.DNS.Name {
+	switch ddnsSpec.Provider.Name {
 	case config.DNSProviderCloudflare:
-		spec := ddnsSpec.DNS.Cloudflare
+		spec := ddnsSpec.Provider.Cloudflare
 		h, err := dns.NewCloudflareDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
 		if err != nil {
 			cancel()
@@ -49,7 +49,7 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 		}
 		handler = h
 	case config.DNSProviderAliCloud:
-		spec := ddnsSpec.DNS.AliCloud
+		spec := ddnsSpec.Provider.AliCloud
 		h, err := dns.NewAliCloudDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
 		if err != nil {
 			cancel()
@@ -57,7 +57,7 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 		}
 		handler = h
 	case config.DNSProviderDNSPod:
-		spec := ddnsSpec.DNS.DNSPod
+		spec := ddnsSpec.Provider.DNSPod
 		h, err := dns.NewDNSPodDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
 		if err != nil {
 			cancel()
@@ -65,8 +65,16 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 		}
 		handler = h
 	case config.DNSProviderHuaweiCloud:
-		spec := ddnsSpec.DNS.Huawei
+		spec := ddnsSpec.Provider.Huawei
 		h, err := dns.NewHuaweiCloudDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		handler = h
+	case config.DNSProviderJDCloud:
+		spec := ddnsSpec.Provider.JD
+		h, err := dns.NewJDCloudDNSUpdateHandler(ddnsSpec, spec, ctx, logger)
 		if err != nil {
 			cancel()
 			return nil, err
@@ -74,7 +82,7 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 		handler = h
 	default:
 		cancel()
-		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.DNS.Name)
+		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.Provider.Name)
 	}
 
 	var addrDetector ip.AddressDetector
