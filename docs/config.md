@@ -77,3 +77,7 @@ ddns:
 | `ddns.dns.dnspod.secretKey`         | string | SecretKey of your Tencent Cloud account                                                                                                  |
 | `ddns.dns.dnspod.region`            | string | Region of your resources.                                                                                                                |
 | `ddns.dns.dnspod.lineId`            | string | (Optional) ID of the line of your DNS record.                                                                                            |
+| `ddns.dns.huawei`                   | object | Credentials and settings for Huawei Cloud DNS provider.                                                                                  |
+| `ddns.dns.huawei.accessKey`         | string | Access key (AK) of the account.                                                                                                          |
+| `ddns.dns.huawei.secretAccessKey`   | string | Secret key (SK) of the account.                                                                                                          |
+| `ddns.dns.huawei.region`            | string | Region of resources and APIs.                                                                                                            |
