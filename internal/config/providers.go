@@ -57,3 +57,15 @@ type DNSPodSpec struct {
 	// LineID is the ID of line, leave empty for default line (0)
 	LineID *string `json:"lineId,omitempty" yaml:"lineId,omitempty"`
 }
+
+// HuaweiCloudSpec is the information of Huawei Cloud credential and settings
+type HuaweiCloudSpec struct {
+	// AccessKey is the access key (AK) of the account
+	AccessKey string `json:"accessKey" yaml:"accessKey"`
+
+	// SecretAccessKey is the secret key (SK) of the account
+	SecretAccessKey string `json:"secretAccessKey" yaml:"secretAccessKey"`
+
+	// Region is the region of resources, this decides the endpoint of the API
+	Region string `json:"region" yaml:"region"`
+}

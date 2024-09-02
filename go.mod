@@ -7,6 +7,7 @@ require (
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.9
 	github.com/cloudflare/cloudflare-go v0.103.0
 	github.com/go-co-op/gocron/v2 v2.11.0
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.112
 	github.com/itchyny/gojq v0.12.16
 	github.com/spf13/cobra v1.8.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.993
@@ -37,6 +38,8 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
+	go.mongodb.org/mongo-driver v1.12.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
