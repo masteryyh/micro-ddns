@@ -15,9 +15,9 @@ ddns:
     detection:
       type: ThirdParty
       api:
-        url: https://whois.pconline.com.cn/ipJson.jsp?json=true
+        url: https://api.ipify.org
         jsonPath: ".ip"
-    dns:
+    provider:
       name: Cloudflare
       cloudflare:
         apiToken: "<redacted>"

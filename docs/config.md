@@ -34,7 +34,7 @@ ddns:
     # interface:
     # Specify interface name here
     #   name: eth0
-    dns:
+    provider:
       # Currently Cloudflare and AliCloud are supported
       name: Cloudflare
       cloudflare:
