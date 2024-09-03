@@ -30,5 +30,5 @@ If you want to use Docker or other containerized solutions to run this program,
  you can use the Docker image of this program by using this command (assumes you are using Docker)
 
 ```bash
-docker run --name ddns -v /host/path/to/config.yaml:/etc/micro-ddns/config.yaml masteryyh/micro-ddns:latest
+docker run --name ddns -v /path/to/config.yaml:/app/config.yaml masteryyh/micro-ddns:alpine
 ```
