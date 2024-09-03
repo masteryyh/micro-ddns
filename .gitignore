@@ -24,7 +24,7 @@ go.work.sum
 # env file
 .env
 
-build/
+bin/
 
 # Ignore test config.yaml
 config.yaml

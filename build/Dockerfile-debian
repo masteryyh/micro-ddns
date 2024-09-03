@@ -1,0 +1,49 @@
+FROM golang:1.23.0-bookworm AS builder
+
+LABEL author=masteryyh
+LABEL email="yyh991013@163.com"
+
+ARG VERSION=0.0.1
+ENV VERSION=${VERSION}
+
+ARG BUILD_TIME
+ENV BUILD_TIME=${BUILD_TIME}
+
+ARG USE_CN_MIRROR
+ENV USE_CN_MIRROR=${USE_CN_MIRROR}
+
+WORKDIR /build
+
+COPY . .
+
+RUN if [ -n "$USE_CN_MIRROR" ]; then \
+        go env -w GO111MODULE=on && \
+        go env -w GOPROXY=https://goproxy.cn,direct; \
+    fi; \
+    make build VERSION=${VERSION} BUILD_TIME=${BUILD_TIME}
+
+FROM debian:bookworm-slim
+
+ARG USE_CN_MIRROR
+ENV USE_CN_MIRROR=${USE_CN_MIRROR}
+
+RUN if [ -n "$USE_CN_MIRROR" ]; then \
+        sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources && \
+        sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    apt-get update && \
+    apt-get install -y ca-certificates
+
+WORKDIR /app
+
+COPY --from=builder /build/bin/micro-ddns .
+
+USER root
+
+RUN chown -R 1001:1001 /app && \
+    chmod 0750 -R /app
+
+USER 1001:1001
+
+ENTRYPOINT ["./micro-ddns"]
+CMD ["run", "--config", "./config.yaml"]
