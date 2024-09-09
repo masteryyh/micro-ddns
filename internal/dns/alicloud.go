@@ -18,9 +18,11 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	alidns "github.com/alibabacloud-go/alidns-20150109/v4/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	"github.com/alibabacloud-go/tea/tea"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/pkg/utils"
 	"log/slog"
@@ -85,6 +87,12 @@ func (h *AliCloudDNSUpdateHandler) Get() (string, error) {
 			RecordId: &h.recordId,
 		})
 		if err != nil {
+			aliErr := &tea.SDKError{}
+			if errors.As(err, &aliErr) {
+				if *aliErr.Code == "InvalidRR.NoExist" {
+					return "", nil
+				}
+			}
 			return "", err
 		}
 

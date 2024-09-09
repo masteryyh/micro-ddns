@@ -18,6 +18,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/masteryyh/micro-ddns/internal/config"
@@ -179,6 +180,10 @@ func (h *CloudflareDNSUpdateHandler) Get() (string, error) {
 	h.logger.Debug("getting DNS record detail for record ID " + h.recordId)
 	record, err := h.apiClient.GetDNSRecord(dnsCtx, cloudflare.ZoneIdentifier(h.zoneId), h.recordId)
 	if err != nil {
+		cfError := &cloudflare.NotFoundError{}
+		if errors.As(err, &cfError) {
+			return "", nil
+		}
 		return "", err
 	}
 	return record.Content, nil
@@ -195,23 +200,21 @@ func (h *CloudflareDNSUpdateHandler) Create(address string) error {
 	ctx, cancel := context.WithTimeout(h.ctx, time.Second*30)
 	defer cancel()
 
-	if h.recordId == "" {
-		h.logger.Debug("creating DNS record")
-		record, err := h.apiClient.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.CreateDNSRecordParams{
-			Type:    string(h.recordType),
-			Name:    h.subdomain,
-			Content: address,
-			ZoneID:  h.zoneId,
-			TTL:     CloudflareDefaultTTL,
-			Proxied: utils.BoolPtr(false),
-			Comment: Comment,
-		})
+	h.logger.Debug("creating DNS record")
+	record, err := h.apiClient.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.CreateDNSRecordParams{
+		Type:    string(h.recordType),
+		Name:    h.subdomain,
+		Content: address,
+		ZoneID:  h.zoneId,
+		TTL:     CloudflareDefaultTTL,
+		Proxied: utils.BoolPtr(false),
+		Comment: Comment,
+	})
 
-		if err != nil {
-			return err
-		}
-		h.recordId = record.ID
+	if err != nil {
+		return err
 	}
+	h.recordId = record.ID
 	return nil
 }
 
