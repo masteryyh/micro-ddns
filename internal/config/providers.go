@@ -24,9 +24,6 @@ type AliCloudSpec struct {
 	// AccessKeySecret is the AccessKeySecret of the account
 	AccessKeySecret string `json:"accessKeySecret" yaml:"accessKeySecret"`
 
-	// RegionID is the region of the domain
-	RegionID string `json:"regionId" yaml:"regionId"`
-
 	// Line is the resolve line of the record
 	Line *string `json:"line,omitempty" yaml:"line,omitempty"`
 }
@@ -51,9 +48,6 @@ type DNSPodSpec struct {
 	// SecretKey is the SecretKey in your credential
 	SecretKey string `json:"secretKey" yaml:"secretKey"`
 
-	// Region is the region of your resource
-	Region string `json:"region" yaml:"region"`
-
 	// LineID is the ID of line, leave empty for default line (0)
 	LineID *string `json:"lineId,omitempty" yaml:"lineId,omitempty"`
 }
@@ -77,9 +71,6 @@ type JDCloudSpec struct {
 
 	// SecretKey is the secret key of the account
 	SecretKey string `json:"secretKey" yaml:"secretKey"`
-
-	// Region is the region of resources, leave it empty for default value cn-north-1
-	RegionID *string `json:"regionId,omitempty" yaml:"regionId,omitempty"`
 
 	// ViewID is the resolve line ID of the DNS record, leave it empty for default value -1
 	ViewID *int `json:"viewId,omitempty" yaml:"viewId,omitempty"`
