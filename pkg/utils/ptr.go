@@ -40,6 +40,12 @@ func BoolPtr(v bool) *bool {
 	return ptr
 }
 
+func IntPtr(v int) *int {
+	ptr := new(int)
+	*ptr = v
+	return ptr
+}
+
 func Int32Ptr(v int32) *int32 {
 	ptr := new(int32)
 	*ptr = v

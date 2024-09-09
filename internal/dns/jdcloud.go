@@ -24,6 +24,7 @@ import (
 	"github.com/jdcloud-api/jdcloud-sdk-go/services/domainservice/client"
 	"github.com/jdcloud-api/jdcloud-sdk-go/services/domainservice/models"
 	"github.com/masteryyh/micro-ddns/internal/config"
+	"github.com/masteryyh/micro-ddns/pkg/utils"
 	"log/slog"
 	"strconv"
 )
@@ -86,8 +87,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 	if h.domainId == nil {
 		h.logger.Debug("domain id is empty, searching")
 
-		request := apis.NewDescribeDomainsRequest(h.regionId, 1, JDCloudPageSize)
-		request.DomainName = &h.domain
+		request := apis.NewDescribeDomainsRequestWithAllParams(h.regionId, 1, JDCloudPageSize, &h.domain, nil)
 		result, err := h.client.DescribeDomains(request)
 		if err != nil {
 			return "", err
@@ -111,8 +111,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 		h.domainId = id
 	}
 
-	request := apis.NewDescribeResourceRecordRequest(h.regionId, strconv.Itoa(*h.domainId))
-	request.Search = &h.subdomain
+	request := apis.NewDescribeResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), utils.IntPtr(1), utils.IntPtr(JDCloudPageSize), &h.subdomain)
 	result, err := h.client.DescribeResourceRecord(request)
 	if err != nil {
 		return "", err
@@ -136,7 +135,7 @@ func (h *JDCloudDNSUpdateHandler) Create(address string) error {
 		return fmt.Errorf("domain id is empty")
 	}
 
-	request := apis.NewCreateResourceRecordRequest(h.regionId, strconv.Itoa(*h.domainId), &models.AddRR{
+	request := apis.NewCreateResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), &models.AddRR{
 		HostRecord: h.subdomain,
 		HostValue:  address,
 		Type:       string(h.recordType),
@@ -164,7 +163,7 @@ func (h *JDCloudDNSUpdateHandler) Update(newAddress string) error {
 		return fmt.Errorf("record id is empty")
 	}
 
-	request := apis.NewModifyResourceRecordRequest(h.regionId, strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
+	request := apis.NewModifyResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
 		DomainName: h.domain,
 		HostRecord: h.subdomain,
 		HostValue:  newAddress,

@@ -46,7 +46,7 @@ type CloudflareSpec struct {
 // DNSPodSpec is the information of Tencent DNSPod API credential and extra settings
 type DNSPodSpec struct {
 	// SecretID is the SecretID in your credential
-	SecretID string `json:"secretId" yaml:"secretKey"`
+	SecretID string `json:"secretId" yaml:"secretId"`
 
 	// SecretKey is the SecretKey in your credential
 	SecretKey string `json:"secretKey" yaml:"secretKey"`

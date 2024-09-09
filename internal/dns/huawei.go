@@ -18,8 +18,10 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
+	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/sdkerr"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/as/v1/region"
 	huaweiv2 "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2/model"
@@ -134,6 +136,12 @@ func (h *HuaweiCloudDNSUpdateHandler) Get() (string, error) {
 		RecordsetId: h.recordSetId,
 	})
 	if err != nil {
+		hwErr := &sdkerr.ServiceResponseError{}
+		if errors.As(err, &hwErr) {
+			if hwErr.StatusCode == 404 {
+				return "", nil
+			}
+		}
 		return "", err
 	}
 	return (*result.Records)[0], nil
@@ -179,9 +187,9 @@ func (h *HuaweiCloudDNSUpdateHandler) Update(newAddress string) error {
 		ZoneId:      h.zoneId,
 		RecordsetId: h.recordSetId,
 		Body: &model.UpdateRecordSetReq{
-			Name:        fqdn,
+			Name:        &fqdn,
 			Description: utils.StringPtr(Comment),
-			Type:        string(h.recordType),
+			Type:        utils.StringPtr(string(h.recordType)),
 			Ttl:         utils.Int32Ptr(HuaweiCloudDefaultTTL),
 			Records:     &[]string{newAddress},
 		},
