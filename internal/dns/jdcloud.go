@@ -38,7 +38,6 @@ type JDCloudDNSUpdateHandler struct {
 	domain     string
 	subdomain  string
 	recordType RecordType
-	regionId   string
 	domainId   *int
 	recordId   *int
 	viewId     int
@@ -64,18 +63,12 @@ func NewJDCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.JDCloudSpec,
 		view = *spec.ViewID
 	}
 
-	region := "cn-north-1"
-	if spec.RegionID != nil {
-		region = *spec.RegionID
-	}
-
 	ctx, cancel := context.WithCancel(parentCtx)
 	return &JDCloudDNSUpdateHandler{
 		domain:     ddns.Domain,
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
 		viewId:     view,
-		regionId:   region,
 		ctx:        ctx,
 		cancel:     cancel,
 		client:     dnsClient,
@@ -87,7 +80,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 	if h.domainId == nil {
 		h.logger.Debug("domain id is empty, searching")
 
-		request := apis.NewDescribeDomainsRequestWithAllParams(h.regionId, 1, JDCloudPageSize, &h.domain, nil)
+		request := apis.NewDescribeDomainsRequestWithAllParams("jdcloud-api", 1, JDCloudPageSize, &h.domain, nil)
 		result, err := h.client.DescribeDomains(request)
 		if err != nil {
 			return "", err
@@ -111,7 +104,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 		h.domainId = id
 	}
 
-	request := apis.NewDescribeResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), utils.IntPtr(1), utils.IntPtr(JDCloudPageSize), &h.subdomain)
+	request := apis.NewDescribeResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), utils.IntPtr(1), utils.IntPtr(JDCloudPageSize), &h.subdomain)
 	result, err := h.client.DescribeResourceRecord(request)
 	if err != nil {
 		return "", err
@@ -135,7 +128,7 @@ func (h *JDCloudDNSUpdateHandler) Create(address string) error {
 		return fmt.Errorf("domain id is empty")
 	}
 
-	request := apis.NewCreateResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), &models.AddRR{
+	request := apis.NewCreateResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), &models.AddRR{
 		HostRecord: h.subdomain,
 		HostValue:  address,
 		Type:       string(h.recordType),
@@ -163,7 +156,7 @@ func (h *JDCloudDNSUpdateHandler) Update(newAddress string) error {
 		return fmt.Errorf("record id is empty")
 	}
 
-	request := apis.NewModifyResourceRecordRequestWithAllParams(h.regionId, strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
+	request := apis.NewModifyResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
 		DomainName: h.domain,
 		HostRecord: h.subdomain,
 		HostValue:  newAddress,

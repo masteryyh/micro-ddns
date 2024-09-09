@@ -1,9 +1,13 @@
 ## Config File
 
+Below is an example configuration file written in YAML, but you can also write in JSON.
+
+Use `--config` or `-c` option in `run` command to specify configuration file path.
+
 ```yaml
 # This is an example config.yaml
-# Using Cloudflare as DNS provider and a 3rd party API
-# to detect public IP address of this network
+# Using Cloudflare as DNS provider and ipify API
+# to detect public IP address
 ddns:
   # Use a unique name for your DDNS instance
   # You can add multiple instances here
@@ -35,7 +39,7 @@ ddns:
     # Specify interface name here
     #   name: eth0
     provider:
-      # Currently Cloudflare and AliCloud are supported
+      # For supported DNS providers, check the detailed document below
       name: Cloudflare
       cloudflare:
         apiToken: "<your-api-token>"
@@ -66,30 +70,27 @@ ddns:
 
 ### DNS provider related
 
-| Name                                     | Type   | Description                                                                                                                |
-|------------------------------------------|--------|----------------------------------------------------------------------------------------------------------------------------|
-| `ddns.provider`                          | object | DNS provider specification.                                                                                                |
-| `ddns.provider.name`                     | string | DNS provider name. Currently `Cloudflare`, `AliCloud`, `DNSPod`, `HuaweiCloud` and `JDCloud` are supported.                |
-| `ddns.provider.cloudflare`               | object | Credentials and settings for Cloudflare DNS provider.                                                                      |
-| `ddns.provider.cloudflare.apiToken`      | string | Fine-grained API token for Cloudflare, recommended as this can limit permissions for a specific token.                     |
-| `ddns.provider.cloudflare.globalApiKey`  | string | Global API key for Cloudflare, not recommended as this key has full power to access your Cloudflare account and resources. |
-| `ddns.provider.cloudflare.email`         | string | Email of your Cloudflare account, must use with global API key.                                                            |
-| `ddns.provider.alicloud`                 | object | Credentials and settings for AliCloud DNS provider.                                                                        |
-| `ddns.provider.alicloud.accessKeyId`     | string | AccessKeyId of your AliCloud account. You can create a RAM sub user to limit permission of this access key.                |
-| `ddns.provider.alicloud.accessKeySecret` | string | AccessKeySecret of your AliCloud account.                                                                                  |
-| `ddns.provider.alicloud.regionId`        | string | Region ID of your resources.                                                                                               |
-| `ddns.provider.alicloud.line`            | string | (Optional) Line of the DNS record.                                                                                         |
-| `ddns.provider.dnspod`                   | object | Credentials and settings for DNSPod DNS provider.                                                                          |
-| `ddns.provider.dnspod.secretId`          | string | SecretID of your Tencent Cloud account.                                                                                    |
-| `ddns.provider.dnspod.secretKey`         | string | SecretKey of your Tencent Cloud account                                                                                    |
-| `ddns.provider.dnspod.region`            | string | Region of your resources.                                                                                                  |
-| `ddns.provider.dnspod.lineId`            | string | (Optional) ID of the line of your DNS record.                                                                              |
-| `ddns.provider.huawei`                   | object | Credentials and settings for Huawei Cloud DNS provider.                                                                    |
-| `ddns.provider.huawei.accessKey`         | string | Access key (AK) of the account.                                                                                            |
-| `ddns.provider.huawei.secretAccessKey`   | string | Secret key (SK) of the account.                                                                                            |
-| `ddns.provider.huawei.region`            | string | Region of resources and APIs.                                                                                              |
-| `ddns.provider.jd`                       | object | Credentials and settings for JD Cloud DNS provider.                                                                        |
-| `ddns.provider.jd.accessKey`             | string | Access key (AK) of the account.                                                                                            |
-| `ddns.provider.jd.secretKey`             | string | Secret Key (SK) of the account.                                                                                            |
-| `ddns.provider.jd.regionId`              | string | (Optional) Region ID of resources, leave empty for default value (cn-north-1).                                             |
-| `ddns.provider.jd.viewId`                | number | (Optional) View ID of the record, leave empty for default value (-1).                                                      |
+| Name                                     | Type   | Description                                                                                                                                                                 |
+|------------------------------------------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ddns.provider`                          | object | DNS provider specification.                                                                                                                                                 |
+| `ddns.provider.name`                     | string | DNS provider name. Currently `Cloudflare`, `AliCloud`, `DNSPod`, `HuaweiCloud` and `JDCloud` are supported.                                                                 |
+| `ddns.provider.cloudflare`               | object | Credentials and settings for Cloudflare DNS provider.                                                                                                                       |
+| `ddns.provider.cloudflare.apiToken`      | string | Fine-grained API token for Cloudflare, recommended as this can limit permissions for a specific token. Conflict with `globalApiKey` and `email`.                            |
+| `ddns.provider.cloudflare.globalApiKey`  | string | Global API key for Cloudflare, not recommended as this key has full permission to access your Cloudflare account and resources. Use with `email`. Conflict with `apiToken`. |
+| `ddns.provider.cloudflare.email`         | string | Email of your Cloudflare account. Use with `globalApiKey`. Conflict with `apiToken`.                                                                                        |
+| `ddns.provider.alicloud`                 | object | Credentials and settings for AliCloud DNS provider.                                                                                                                         |
+| `ddns.provider.alicloud.accessKeyId`     | string | AccessKeyId of your AliCloud account. You can create a RAM sub user to limit permission of this access key.                                                                 |
+| `ddns.provider.alicloud.accessKeySecret` | string | AccessKeySecret of your AliCloud account.                                                                                                                                   |
+| `ddns.provider.alicloud.line`            | string | (Optional) Line of the DNS record.                                                                                                                                          |
+| `ddns.provider.dnspod`                   | object | Credentials and settings for DNSPod DNS provider.                                                                                                                           |
+| `ddns.provider.dnspod.secretId`          | string | SecretID of your Tencent Cloud account.                                                                                                                                     |
+| `ddns.provider.dnspod.secretKey`         | string | SecretKey of your Tencent Cloud account                                                                                                                                     |
+| `ddns.provider.dnspod.lineId`            | string | (Optional) ID of the line of your DNS record.                                                                                                                               |
+| `ddns.provider.huawei`                   | object | Credentials and settings for Huawei Cloud DNS provider.                                                                                                                     |
+| `ddns.provider.huawei.accessKey`         | string | Access key (AK) of the account.                                                                                                                                             |
+| `ddns.provider.huawei.secretAccessKey`   | string | Secret key (SK) of the account.                                                                                                                                             |
+| `ddns.provider.huawei.region`            | string | Region of resources and APIs.                                                                                                                                               |
+| `ddns.provider.jd`                       | object | Credentials and settings for JD Cloud DNS provider.                                                                                                                         |
+| `ddns.provider.jd.accessKey`             | string | Access key (AK) of the account.                                                                                                                                             |
+| `ddns.provider.jd.secretKey`             | string | Secret Key (SK) of the account.                                                                                                                                             |
+| `ddns.provider.jd.viewId`                | number | (Optional) View ID of the record, leave empty for default value (-1).                                                                                                       |

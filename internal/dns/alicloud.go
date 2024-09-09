@@ -50,7 +50,6 @@ func NewAliCloudDNSUpdateHandler(ddns *config.DDNSSpec, aliSpec *config.AliCloud
 	clientConfig := &openapi.Config{
 		AccessKeyId:     &aliSpec.AccessKeyID,
 		AccessKeySecret: &aliSpec.AccessKeySecret,
-		RegionId:        &aliSpec.RegionID,
 	}
 	client, err := alidns.NewClient(clientConfig)
 	if err != nil {
