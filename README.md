@@ -16,7 +16,6 @@ ddns:
       type: ThirdParty
       api:
         url: https://api.ipify.org
-        jsonPath: ".ip"
     provider:
       name: Cloudflare
       cloudflare:
