@@ -56,6 +56,7 @@ const (
 	DNSProviderDNSPod      DNSProvider = "DNSPod"
 	DNSProviderHuaweiCloud DNSProvider = "HuaweiCloud"
 	DNSProviderJDCloud     DNSProvider = "JDCloud"
+	DNSProviderRFC2136     DNSProvider = "RFC2136"
 )
 
 // DNSProviderSpec is the specification of DNS provider, currently only Cloudflare
@@ -73,6 +74,8 @@ type DNSProviderSpec struct {
 	Huawei *HuaweiCloudSpec `json:"huawei,omitempty" yaml:"huawei,omitempty"`
 
 	JD *JDCloudSpec `json:"jd,omitempty" yaml:"jd,omitempty"`
+
+	RFC2136 *RFC2136Spec `json:"rfc2136,omitempty" yaml:"rfc2136,omitempty"`
 }
 
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface

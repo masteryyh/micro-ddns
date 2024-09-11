@@ -80,6 +80,14 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 			return nil, err
 		}
 		handler = h
+	case config.DNSProviderRFC2136:
+		spec := ddnsSpec.Provider.RFC2136
+		h, err := dns.NewRFC2136DNSUpdateHandler(ddnsSpec, spec, ctx, logger)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		handler = h
 	default:
 		cancel()
 		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.Provider.Name)
@@ -123,7 +131,7 @@ func (n *DDNSInstance) DoUpdate() error {
 		return err
 	}
 	if recordAddr == "" {
-		n.logger.Info("DNS record for this subdomain not found, creating", "name", n.spec.Name, "domain", n.spec.Domain, "subdomain", n.spec.Subdomain)
+		n.logger.Info("DNS record for this subdomain not found or ignored, creating", "name", n.spec.Name, "domain", n.spec.Domain, "subdomain", n.spec.Subdomain)
 		return n.dnsHandler.Create(addr)
 	}
 
