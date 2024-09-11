@@ -75,3 +75,39 @@ type JDCloudSpec struct {
 	// ViewID is the resolve line ID of the DNS record, leave it empty for default value -1
 	ViewID *int `json:"viewId,omitempty" yaml:"viewId,omitempty"`
 }
+
+// RFC2136Spec is the information about an RFC 2136 compliant DNS server
+type RFC2136Spec struct {
+	// Address of the DNS server
+	Address string `json:"address" yaml:"address"`
+
+	// Port of the DNS server, leave empty for default value (53)
+	Port *int `json:"port,omitempty" yaml:"port,omitempty"`
+
+	// UseTCP specifies if TCP should be used instead of UDP to contact DNS server
+	UseTCP *bool `json:"useTcp,omitempty" yaml:"useTcp,omitempty"`
+
+	TSIG *TSIGSpec `json:"tsig,omitempty" yaml:"tsig,omitempty"`
+
+	GSSTSIG *GSSTSIGSpec `json:"gssTsig,omitempty" yaml:"gssTsig,omitempty"`
+}
+
+// TSIGSpec is the information about TSIG authentication
+type TSIGSpec struct {
+	// KeyName is the name of TSIG key
+	KeyName string `json:"keyName,omitempty" yaml:"keyName,omitempty"`
+
+	// Key is the key for TSIG
+	Key string `json:"key,omitempty" yaml:"key,omitempty"`
+}
+
+type GSSTSIGSpec struct {
+	// Domain is the domain of the directory service
+	Domain string `json:"domain" yaml:"domain"`
+
+	// Username is the name of the user to authenticate
+	Username string `json:"username" yaml:"username"`
+
+	// Password is the password of the user
+	Password string `json:"password" yaml:"password"`
+}

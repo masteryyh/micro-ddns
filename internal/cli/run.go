@@ -44,6 +44,6 @@ var (
 )
 
 func init() {
-	runCmd.Flags().StringVarP(&configFile, "config", "c", "/etc/ddns/config.yaml", "config file location")
+	runCmd.Flags().StringVarP(&configFile, "config", "c", "/etc/micro-ddns/config.yaml", "config file location")
 	rootCmd.AddCommand(runCmd)
 }
