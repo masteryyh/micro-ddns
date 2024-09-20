@@ -19,13 +19,14 @@ package dns
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strconv"
+	"time"
+
 	"github.com/bodgit/tsig"
 	"github.com/bodgit/tsig/gss"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/miekg/dns"
-	"log/slog"
-	"strconv"
-	"time"
 )
 
 const RFC2136DefaultTTL = 120
@@ -92,11 +93,9 @@ func NewRFC2136DNSUpdateHandler(ddns *config.DDNSSpec, spec *config.RFC2136Spec,
 		client.TsigProvider = gssClient
 
 		go func(client *gss.Client) {
-			select {
-			case <-ctx.Done():
-				if gssClient != nil {
-					gssClient.Close()
-				}
+			<-ctx.Done()
+			if gssClient != nil {
+				gssClient.Close()
 			}
 		}(gssClient)
 	}

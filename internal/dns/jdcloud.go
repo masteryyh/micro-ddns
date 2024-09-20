@@ -89,7 +89,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 			return "", fmt.Errorf(result.Error.Message)
 		}
 
-		id := new(int)
+		id := utils.IntPtr(-1)
 		for _, domain := range result.Result.DataList {
 			if h.domain == domain.DomainName {
 				*id = domain.Id
@@ -98,7 +98,7 @@ func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
 			}
 		}
 
-		if id == nil {
+		if *id == -1 {
 			return "", fmt.Errorf("domain " + h.domain + " not exists")
 		}
 		h.domainId = id

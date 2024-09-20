@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/pkg/utils"
-	"log/slog"
-	"time"
 )
 
 const (
@@ -205,7 +206,7 @@ func (h *CloudflareDNSUpdateHandler) Create(address string) error {
 		Type:    string(h.recordType),
 		Name:    h.subdomain,
 		Content: address,
-		ZoneID:  h.zoneId,
+		ID:      h.zoneId,
 		TTL:     CloudflareDefaultTTL,
 		Proxied: utils.BoolPtr(false),
 		Comment: Comment,
