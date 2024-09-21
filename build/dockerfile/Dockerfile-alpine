@@ -1,4 +1,4 @@
-FROM golang:1.23.0-alpine3.20 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.0-alpine3.20 AS builder
 
 LABEL author=masteryyh
 LABEL email="yyh991013@163.com"
@@ -12,7 +12,7 @@ ENV BUILD_TIME=${BUILD_TIME}
 ARG USE_CN_MIRROR
 ENV USE_CN_MIRROR=${USE_CN_MIRROR}
 
-WORKDIR /build
+WORKDIR /compile
 
 COPY . .
 
@@ -21,8 +21,7 @@ RUN if [ -n "$USE_CN_MIRROR" ]; then \
         go env -w GO111MODULE=on && \
         go env -w GOPROXY=https://goproxy.cn,direct; \
     fi; \
-    apk add --no-cache make git && \
-    make build VERSION=${VERSION} BUILD_TIME=${BUILD_TIME}
+    apk add --no-cache git bash; build/scripts/build.sh
 
 FROM alpine:3.20
 
@@ -36,7 +35,7 @@ RUN if [ -n "$USE_CN_MIRROR" ]; then \
 
 WORKDIR /app
 
-COPY --from=builder /build/bin/micro-ddns .
+COPY --from=builder /compile/bin/micro-ddns .
 
 USER root
 
