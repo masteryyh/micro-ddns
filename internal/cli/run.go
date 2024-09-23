@@ -18,6 +18,7 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/masteryyh/micro-ddns/internal/app"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +39,8 @@ var (
 			if err != nil {
 				return err
 			}
-			return a.Run()
+			a.Run()
+			return nil
 		},
 	}
 )

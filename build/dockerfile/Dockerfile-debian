@@ -32,7 +32,7 @@ RUN if [ -n "$USE_CN_MIRROR" ]; then \
         sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources; \
     fi; \
     apt-get update && \
-    apt-get install -y ca-certificates
+    apt-get install -y ca-certificates curl
 
 WORKDIR /app
 
@@ -44,6 +44,9 @@ RUN chown -R 1001:1001 /app && \
     chmod 0750 -R /app
 
 USER 1001:1001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=3s --retries=3 \
+    CMD bash -c "curl -sf http://127.0.0.1:8080/ping > /dev/null || exit 1"
 
 ENTRYPOINT ["./micro-ddns"]
 CMD ["run", "--config", "./config.yaml"]
