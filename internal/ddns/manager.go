@@ -19,9 +19,10 @@ package ddns
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/go-co-op/gocron/v2"
 	"github.com/masteryyh/micro-ddns/internal/config"
-	"log/slog"
 )
 
 type DDNSInstanceManager struct {
@@ -67,7 +68,7 @@ func NewDDNSInstanceManager(parentCtx context.Context, specs []*config.DDNSSpec,
 	}, nil
 }
 
-func (m *DDNSInstanceManager) Start() error {
+func (m *DDNSInstanceManager) Start() {
 	for name, instance := range m.instances {
 		m.logger.Info("registering DDNS task", "name", name)
 		job, err := m.scheduler.NewJob(gocron.CronJob(instance.spec.Cron, false), gocron.NewTask(func(instance *DDNSInstance) {
@@ -80,17 +81,18 @@ func (m *DDNSInstanceManager) Start() error {
 		}, instance))
 		if err != nil {
 			m.logger.Error("failed to create job", "name", name, "err", err)
-			return err
+			m.cancel()
+			return
 		}
 
 		m.logger.Info("created cron job", "name", name, "id", job.ID().String())
 	}
 
 	m.scheduler.Start()
-	select {
-	case <-m.ctx.Done():
-	}
 
+	<-m.ctx.Done()
 	m.logger.Info("shutting down ddns scheduler")
-	return m.scheduler.Shutdown()
+	if err := m.scheduler.Shutdown(); err != nil {
+		m.logger.Error(fmt.Sprintf("failed shutting down ddns scheduler: %v", err))
+	}
 }

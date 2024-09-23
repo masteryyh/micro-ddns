@@ -31,7 +31,7 @@ ENV USE_CN_MIRROR=${USE_CN_MIRROR}
 RUN if [ -n "$USE_CN_MIRROR" ]; then \
         sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories; \
     fi; \
-    apk add --no-cache ca-certificates
+    apk add --no-cache ca-certificates curl
 
 WORKDIR /app
 
@@ -43,6 +43,9 @@ RUN chown -R 1001:1001 /app && \
     chmod 0750 -R /app
 
 USER 1001:1001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=3s --retries=3 \
+    CMD sh -c "curl -sf http://127.0.0.1:8080/ping > /dev/null || exit 1"
 
 ENTRYPOINT ["./micro-ddns"]
 CMD ["run", "--config", "./config.yaml"]

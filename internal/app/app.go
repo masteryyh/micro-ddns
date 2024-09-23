@@ -19,12 +19,14 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+
 	"github.com/go-co-op/gocron/v2"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/internal/ddns"
+	"github.com/masteryyh/micro-ddns/internal/metrics"
 	"github.com/masteryyh/micro-ddns/internal/signal"
-	"log/slog"
-	"os"
 )
 
 type App struct {
@@ -32,8 +34,7 @@ type App struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	logger  *slog.Logger
-
-	configFile string
+	metrics *metrics.MetricsServer
 }
 
 func initLogger(level int) (*slog.Logger, error) {
@@ -56,32 +57,38 @@ func NewApp(logLevel int, configFile string) (*App, error) {
 		return nil, err
 	}
 
+	logger.Info("reading config file from " + configFile)
+	configs, err := config.ReadConfigOrGet(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduler, err := gocron.NewScheduler()
+	if err != nil {
+		return nil, err
+	}
+
+	manager, err := ddns.NewDDNSInstanceManager(ctx, configs.DDNS, scheduler, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	metricsLogger := logger.With(slog.Group("component", "type", "metrics"))
 	return &App{
-		ctx:        ctx,
-		cancel:     cancel,
-		logger:     logger,
-		configFile: configFile,
+		ctx:     ctx,
+		cancel:  cancel,
+		logger:  logger,
+		manager: manager,
+		metrics: metrics.NewMetricsServer(ctx, metricsLogger),
 	}, nil
 }
 
-func (a *App) Run() error {
+func (a *App) Run() {
 	a.logger.Info("starting app")
-	a.logger.Info("reading config file from " + a.configFile)
-	configs, err := config.ReadConfigOrGet(a.configFile)
-	if err != nil {
-		return err
-	}
 
-	a.logger.Info("starting cron task scheduler")
-	scheduler, err := gocron.NewScheduler()
-	if err != nil {
-		return err
-	}
+	go a.metrics.Serve()
+	go a.manager.Start()
 
-	manager, err := ddns.NewDDNSInstanceManager(a.ctx, configs.DDNS, scheduler, a.logger)
-	if err != nil {
-		return err
-	}
-
-	return manager.Start()
+	<-a.ctx.Done()
+	a.logger.Info("shutting down")
 }
