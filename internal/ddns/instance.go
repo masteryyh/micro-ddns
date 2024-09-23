@@ -97,10 +97,8 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, parentCtx context.Context, logge
 	switch ddnsSpec.Detection.Type {
 	case config.AddressDetectionIface:
 		addrDetector = ip.NewIfaceAddressDetector(ddnsSpec.Detection, ddnsSpec.Stack, logger)
-		break
 	case config.AddressDetectionThirdParty:
 		addrDetector = ip.NewThirdPartyAddressDetector(ddnsSpec.Detection, ddnsSpec.Stack, ctx, logger)
-		break
 	default:
 		cancel()
 		return nil, fmt.Errorf("unknown address detection method %s", ddnsSpec.Detection.Type)

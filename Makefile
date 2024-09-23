@@ -22,6 +22,7 @@ ifeq ($(DOCKER), "docker not found")
 endif
 	@echo "Cleaning build artifacts..."
 	rm -rf bin
+	rm -f *.tgz *.tgz.prov
 	$(DOCKER) image rm -f $(IMG):$(TAG)-bookworm-slim
 	$(DOCKER) image rm -f $(IMG):bookworm-slim
 	$(DOCKER) image rm -f $(IMG):$(TAG)-alpine3.20
@@ -54,5 +55,11 @@ endif
 	$(DOCKER) push $(IMG):alpine3.20
 	$(DOCKER) push $(IMG):$(TAG)
 	$(DOCKER) push $(IMG):latest
+
+	@echo "Packing Helm Chart..."
+	helm package --sign --key masteryyh-signer --keyring ~/.gnupg/secring.gpg deploy/chart/micro-ddns --passphrase-file ./gpg-key-passphrase
+
+	@echo "Uploading Helm Chart..."
+	helm push ./micro-ddns-$(VERSION).tgz oci://registry-1.docker.io/masteryyh
 
 .PHONY: clean build build-image

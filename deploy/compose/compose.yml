@@ -1,0 +1,27 @@
+name: ddns
+
+services:
+  ddns:
+    image: masteryyh/micro-ddns:bookworm-slim
+    container_name: ddns
+    configs:
+      - source: config
+        target: /app/config.yaml
+
+configs:
+  config:
+    content: |
+      ddns:
+        - name: homelab
+          domain: yourdomain.com
+          subdomain: test
+          stack: IPv4
+          cron: "*/30 * * * *"
+          detection:
+            type: ThirdParty
+            api:
+              url: https://api.ipify.org
+          provider:
+            name: Cloudflare
+            cloudflare:
+              apiToken: "<redacted>"

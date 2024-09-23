@@ -34,19 +34,12 @@ RUN if [ -n "$USE_CN_MIRROR" ]; then \
     apt-get update && \
     apt-get install -y ca-certificates curl
 
-WORKDIR /app
-
-COPY --from=builder /compile/bin/micro-ddns .
-
-USER root
-
-RUN chown -R 1001:1001 /app && \
-    chmod 0750 -R /app
+COPY --from=builder /compile/bin/micro-ddns /usr/local/bin/micro-ddns
 
 USER 1001:1001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=3s --retries=3 \
     CMD bash -c "curl -sf http://127.0.0.1:8080/ping > /dev/null || exit 1"
 
-ENTRYPOINT ["./micro-ddns"]
-CMD ["run", "--config", "./config.yaml"]
+ENTRYPOINT ["micro-ddns"]
+CMD ["run", "--config", "/etc/micro-ddns/config.yaml"]
