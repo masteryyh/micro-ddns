@@ -5,7 +5,7 @@ IP address detection methods and DNS providers.
 
 ## Quick Start
 ```yaml
-# /app/config.yaml
+# /etc/micro-ddns/config.yaml
 ddns:
   - name: homelab
     domain: yourdomain.com
@@ -23,13 +23,13 @@ ddns:
 ```
 
 ```
-$ micro-ddns run --config /app/config.yaml
+$ micro-ddns run --config /etc/micro-ddns/config.yaml
 ```
 
 OR you can run as a container:
 
 ```
-$ docker run --name ddns -d -v /path/to/config.yaml:/app/config.yaml masteryyh/micro-ddns:alpine
+$ docker run --name ddns -d -v /path/to/config.yaml:/etc/micro-ddns/config.yaml masteryyh/micro-ddns:alpine
 ```
 
 ## License

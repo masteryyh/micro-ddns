@@ -31,3 +31,6 @@ config.yaml
 
 # GoLand configs
 .idea/
+
+*.tgz
+*.tgz.prov
