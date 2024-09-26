@@ -19,12 +19,20 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
+	"regexp"
 	"strings"
+
+	"github.com/masteryyh/micro-ddns/pkg/utils"
+	"gopkg.in/yaml.v3"
 )
 
-var config Config
+var (
+	config Config
+
+	domainRegex    = regexp.MustCompile(`^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$`)
+	subdomainRegex = regexp.MustCompile(`^([a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)|([a-zA-Z0-9]*@[a-zA-Z0-9]*)$`)
+)
 
 type NetworkStack string
 
@@ -78,11 +86,68 @@ type DNSProviderSpec struct {
 	RFC2136 *RFC2136Spec `json:"rfc2136,omitempty" yaml:"rfc2136,omitempty"`
 }
 
+func (spec *DNSProviderSpec) Validate() error {
+	if spec.Name == "" {
+		return fmt.Errorf("provider name cannot be empty")
+	}
+
+	count := 0
+	if spec.Cloudflare != nil {
+		count++
+	}
+	if spec.AliCloud != nil {
+		count++
+	}
+	if spec.DNSPod != nil {
+		count++
+	}
+	if spec.Huawei != nil {
+		count++
+	}
+	if spec.JD != nil {
+		count++
+	}
+	if spec.RFC2136 != nil {
+		count++
+	}
+
+	if count == 0 {
+		return fmt.Errorf("no provider specified")
+	}
+
+	if count > 1 {
+		return fmt.Errorf("only 1 provider can be used within 1 spec")
+	}
+
+	if spec.Cloudflare != nil {
+		return spec.Validate()
+	} else if spec.AliCloud != nil {
+		return spec.AliCloud.Validate()
+	} else if spec.DNSPod != nil {
+		return spec.DNSPod.Validate()
+	} else if spec.Huawei != nil {
+		return spec.Huawei.Validate()
+	} else if spec.JD != nil {
+		return spec.JD.Validate()
+	} else if spec.RFC2136 != nil {
+		return spec.RFC2136.Validate()
+	}
+
+	return nil
+}
+
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface
 // By default the first address detected will be used
 type NetworkInterfaceDetectionSpec struct {
 	// Name is the name of interface
 	Name string `json:"name" yaml:"name"`
+}
+
+func (spec *NetworkInterfaceDetectionSpec) Validate() error {
+	if spec.Name == "" {
+		return fmt.Errorf("interface name cannot be empty")
+	}
+	return nil
 }
 
 // ThirdPartyServiceSpec defines how should we access third party API to get our IP address
@@ -106,6 +171,18 @@ type ThirdPartyServiceSpec struct {
 	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
+func (spec *ThirdPartyServiceSpec) Validate() error {
+	if spec.URL == "" {
+		return fmt.Errorf("url cannot be empty")
+	}
+
+	if spec.JsonPath != nil && *spec.JsonPath == "" {
+		spec.JsonPath = nil
+	}
+
+	return nil
+}
+
 // AddressDetectionSpec defines how should we detect current IP address
 type AddressDetectionSpec struct {
 	// Type is the type of address detection method
@@ -121,6 +198,36 @@ type AddressDetectionSpec struct {
 	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
 
 	API *ThirdPartyServiceSpec `json:"api,omitempty" yaml:"api,omitempty"`
+}
+
+func (spec *AddressDetectionSpec) Validate() error {
+	t := string(spec.Type)
+	if t == "" {
+		return fmt.Errorf("detection type is needed")
+	}
+
+	if t != "Interface" && t != "ThirdParty" {
+		return fmt.Errorf("unknown detection type %s", t)
+	}
+
+	if spec.LocalAddressPolicy == nil {
+		spec.LocalAddressPolicy = (*LocalAddressPolicy)(utils.StringPtr("Ignore"))
+	}
+
+	p := *spec.LocalAddressPolicy
+	if p != "Ignore" && p != "Prefer" && p != "Allow" {
+		return fmt.Errorf("unknown localAddressPolicy %s", p)
+	}
+
+	if spec.Interface == nil && spec.API == nil {
+		return fmt.Errorf("must define a address detection method")
+	}
+
+	if spec.Interface != nil {
+		return spec.Interface.Validate()
+	} else {
+		return spec.API.Validate()
+	}
 }
 
 // DDNSSpec is the specification of DDNS service
@@ -145,16 +252,58 @@ type DDNSSpec struct {
 	Provider DNSProviderSpec `json:"provider" yaml:"provider"`
 }
 
+func (spec *DDNSSpec) Validate() error {
+	if spec.Name == "" {
+		return fmt.Errorf("name is needed for a DDNS spec")
+	}
+
+	if spec.Domain == "" {
+		return fmt.Errorf("domain cannot be empty")
+	}
+
+	if !domainRegex.MatchString(spec.Domain) {
+		return fmt.Errorf("%s is not a valid domain", spec.Domain)
+	}
+
+	if spec.Subdomain == "" {
+		return fmt.Errorf("subdomain cannot be empty, use \"@\" if you want to use zone apex")
+	}
+
+	if !subdomainRegex.MatchString(spec.Subdomain) {
+		return fmt.Errorf("%s is not a valid subdomain", spec.Subdomain)
+	}
+
+	stack := string(spec.Stack)
+	if stack == "" {
+		return fmt.Errorf("stack cannot be empty, must be one of IPv4 or IPv6")
+	}
+
+	if stack != "IPv4" && stack != "IPv6" {
+		return fmt.Errorf("%s is not a valid stack, must be one of IPv4 or IPv6", stack)
+	}
+
+	if spec.Cron == "" {
+		return fmt.Errorf("crontab cannot be empty")
+	}
+
+	return spec.Detection.Validate()
+}
+
 // Config is the configuration of this application
 type Config struct {
 	DDNS []*DDNSSpec `json:"ddns,omitempty" yaml:"ddns,omitempty"`
 }
 
-func ReadConfigOrGet(path string) (*Config, error) {
-	if len(config.DDNS) > 0 {
-		return &config, nil
+func (c *Config) Validate() error {
+	for _, v := range c.DDNS {
+		if err := v.Validate(); err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
+func ReadConfigOrGet(path string) (*Config, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -186,6 +335,10 @@ func ReadConfigOrGet(path string) (*Config, error) {
 		}
 	default:
 		return nil, fmt.Errorf("config path points to an unknown file type")
+	}
+
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
 
 	return &config, nil
