@@ -16,6 +16,8 @@ limitations under the License.
 
 package config
 
+import "fmt"
+
 // AliCloudSpec is the information of AliCloud API credential and extra settings
 type AliCloudSpec struct {
 	// AccessKeyID is the AccessKey of the account
@@ -26,6 +28,18 @@ type AliCloudSpec struct {
 
 	// Line is the resolve line of the record
 	Line *string `json:"line,omitempty" yaml:"line,omitempty"`
+}
+
+func (spec *AliCloudSpec) Validate() error {
+	if spec.AccessKeyID == "" {
+		return fmt.Errorf("AccessKeyID cannot be empty")
+	}
+
+	if spec.AccessKeySecret == "" {
+		return fmt.Errorf("AccessKeySecret cannot be empty")
+	}
+
+	return nil
 }
 
 // CloudflareSpec is the information of Cloudflare API credential
@@ -40,6 +54,20 @@ type CloudflareSpec struct {
 	Email *string `json:"email,omitempty" yaml:"email,omitempty"`
 }
 
+func (spec *CloudflareSpec) Validate() error {
+	if spec.APIToken == nil || *spec.APIToken == "" {
+		if spec.GlobalAPIKey == nil || *spec.GlobalAPIKey == "" {
+			return fmt.Errorf("must choose between api token or global api key with email")
+		}
+
+		if spec.Email == nil || *spec.Email == "" {
+			return fmt.Errorf("must choose between api token or global api key with email")
+		}
+	}
+
+	return nil
+}
+
 // DNSPodSpec is the information of Tencent DNSPod API credential and extra settings
 type DNSPodSpec struct {
 	// SecretID is the SecretID in your credential
@@ -50,6 +78,18 @@ type DNSPodSpec struct {
 
 	// LineID is the ID of line, leave empty for default line (0)
 	LineID *string `json:"lineId,omitempty" yaml:"lineId,omitempty"`
+}
+
+func (spec *DNSPodSpec) Validate() error {
+	if spec.SecretID == "" {
+		return fmt.Errorf("SecretID cannot be empty")
+	}
+
+	if spec.SecretKey == "" {
+		return fmt.Errorf("SecretKey cannot be empty")
+	}
+
+	return nil
 }
 
 // HuaweiCloudSpec is the information of Huawei Cloud credential and settings
@@ -64,6 +104,22 @@ type HuaweiCloudSpec struct {
 	Region string `json:"region" yaml:"region"`
 }
 
+func (spec *HuaweiCloudSpec) Validate() error {
+	if spec.AccessKey == "" {
+		return fmt.Errorf("AcessKey cannot be empty")
+	}
+
+	if spec.SecretAccessKey == "" {
+		return fmt.Errorf("SecretAccessKey cannot be empty")
+	}
+
+	if spec.Region == "" {
+		return fmt.Errorf("region cannot be empty")
+	}
+
+	return nil
+}
+
 // JDCloudSpec is the information of JDCloud credential and settings
 type JDCloudSpec struct {
 	// AccessKey is the access key of the account
@@ -74,6 +130,18 @@ type JDCloudSpec struct {
 
 	// ViewID is the resolve line ID of the DNS record, leave it empty for default value -1
 	ViewID *int `json:"viewId,omitempty" yaml:"viewId,omitempty"`
+}
+
+func (spec *JDCloudSpec) Validate() error {
+	if spec.AccessKey == "" {
+		return fmt.Errorf("AccessKey cannot be empty")
+	}
+
+	if spec.SecretKey == "" {
+		return fmt.Errorf("SecretKey cannot be empty")
+	}
+
+	return nil
 }
 
 // RFC2136Spec is the information about an RFC 2136 compliant DNS server
@@ -92,6 +160,24 @@ type RFC2136Spec struct {
 	GSSTSIG *GSSTSIGSpec `json:"gssTsig,omitempty" yaml:"gssTsig,omitempty"`
 }
 
+func (spec *RFC2136Spec) Validate() error {
+	if spec.Address == "" {
+		return fmt.Errorf("address cannot be empty")
+	}
+
+	if spec.Port != nil && (*spec.Port < 1 || *spec.Port > 65535) {
+		return fmt.Errorf("port %d is invalid", *spec.Port)
+	}
+
+	if spec.TSIG != nil {
+		return spec.TSIG.Validate()
+	} else if spec.GSSTSIG != nil {
+		return spec.GSSTSIG.Validate()
+	}
+
+	return nil
+}
+
 // TSIGSpec is the information about TSIG authentication
 type TSIGSpec struct {
 	// KeyName is the name of TSIG key
@@ -99,6 +185,18 @@ type TSIGSpec struct {
 
 	// Key is the key for TSIG
 	Key string `json:"key,omitempty" yaml:"key,omitempty"`
+}
+
+func (spec *TSIGSpec) Validate() error {
+	if spec.KeyName == "" {
+		return fmt.Errorf("key name cannot be empty")
+	}
+
+	if spec.Key == "" {
+		return fmt.Errorf("key cannot be empty")
+	}
+
+	return nil
 }
 
 type GSSTSIGSpec struct {
@@ -110,4 +208,20 @@ type GSSTSIGSpec struct {
 
 	// Password is the password of the user
 	Password string `json:"password" yaml:"password"`
+}
+
+func (spec *GSSTSIGSpec) Validate() error {
+	if spec.Domain == "" {
+		return fmt.Errorf("domain cannot be empty")
+	}
+
+	if spec.Username == "" {
+		return fmt.Errorf("username cannot be empty")
+	}
+
+	if spec.Password == "" {
+		return fmt.Errorf("password cannot be empty")
+	}
+
+	return nil
 }
