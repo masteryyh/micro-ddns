@@ -17,7 +17,6 @@ limitations under the License.
 package app
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -31,8 +30,6 @@ import (
 
 type App struct {
 	manager *ddns.DDNSInstanceManager
-	ctx     context.Context
-	cancel  context.CancelFunc
 	logger  *slog.Logger
 	metrics *metrics.MetricsServer
 }
@@ -50,8 +47,6 @@ func initLogger(level int) (*slog.Logger, error) {
 }
 
 func NewApp(logLevel int, configFile string) (*App, error) {
-	ctx, cancel := signal.SetupContext()
-
 	logger, err := initLogger(logLevel)
 	if err != nil {
 		return nil, err
@@ -68,27 +63,28 @@ func NewApp(logLevel int, configFile string) (*App, error) {
 		return nil, err
 	}
 
-	manager, err := ddns.NewDDNSInstanceManager(ctx, configs.DDNS, scheduler, logger)
+	manager, err := ddns.NewDDNSInstanceManager(configs.DDNS, scheduler, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	metricsLogger := logger.With(slog.Group("component", "type", "metrics"))
 	return &App{
-		ctx:     ctx,
-		cancel:  cancel,
 		logger:  logger,
 		manager: manager,
-		metrics: metrics.NewMetricsServer(ctx, metricsLogger),
+		metrics: metrics.NewMetricsServer(metricsLogger),
 	}, nil
 }
 
 func (a *App) Run() {
 	a.logger.Info("starting app")
 
-	go a.metrics.Serve()
-	go a.manager.Start()
+	ctx, cancel := signal.SetupContext()
+	defer cancel()
 
-	<-a.ctx.Done()
+	go a.metrics.Serve(ctx)
+	go a.manager.Start(ctx)
+
+	<-ctx.Done()
 	a.logger.Info("shutting down")
 }

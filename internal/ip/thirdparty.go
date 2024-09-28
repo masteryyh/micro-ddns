@@ -21,15 +21,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/itchyny/gojq"
-	"github.com/masteryyh/micro-ddns/internal/config"
-	"github.com/masteryyh/micro-ddns/pkg/utils"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/itchyny/gojq"
+	"github.com/masteryyh/micro-ddns/internal/config"
+	"github.com/masteryyh/micro-ddns/pkg/utils"
 )
 
 type ThirdPartyAddressDetector struct {
@@ -42,11 +43,10 @@ type ThirdPartyAddressDetector struct {
 	localAddressPolicy config.LocalAddressPolicy
 	stack              config.NetworkStack
 
-	ctx    context.Context
 	logger *slog.Logger
 }
 
-func NewThirdPartyAddressDetector(detectionSpec config.AddressDetectionSpec, stack config.NetworkStack, ctx context.Context, logger *slog.Logger) *ThirdPartyAddressDetector {
+func NewThirdPartyAddressDetector(detectionSpec config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *ThirdPartyAddressDetector {
 	spec := detectionSpec.API
 
 	var policy config.LocalAddressPolicy
@@ -64,19 +64,18 @@ func NewThirdPartyAddressDetector(detectionSpec config.AddressDetectionSpec, sta
 		password:           utils.StringPtrToString(spec.Password),
 		localAddressPolicy: policy,
 		stack:              stack,
-		ctx:                ctx,
 		logger:             logger,
 	}
 }
 
-func (d *ThirdPartyAddressDetector) requestAddress() (string, error) {
+func (d *ThirdPartyAddressDetector) requestAddress(parentCtx context.Context) (string, error) {
 	client := http.DefaultClient
 	params := url.Values{}
 	for k, v := range d.params {
 		params.Set(k, v)
 	}
 
-	ctx, cancel := context.WithTimeout(d.ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 3*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.url, nil)
 	if err != nil {
@@ -94,6 +93,9 @@ func (d *ThirdPartyAddressDetector) requestAddress() (string, error) {
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 
 	header := res.Header.Get("Content-Type")
 	if header == "" {
@@ -105,14 +107,14 @@ func (d *ThirdPartyAddressDetector) requestAddress() (string, error) {
 		if d.jsonPath == "" {
 			return "", fmt.Errorf("no jsonpath specified")
 		}
-		return d.extractIP(body, d.jsonPath, d.ctx)
+		return d.extractIP(parentCtx, body, d.jsonPath)
 	}
 
 	d.logger.Debug("use body as address directly", "body", body)
 	return string(body), nil
 }
 
-func (d *ThirdPartyAddressDetector) extractIP(response []byte, jsonpath string, ctx context.Context) (string, error) {
+func (d *ThirdPartyAddressDetector) extractIP(parentCtx context.Context, response []byte, jsonpath string) (string, error) {
 	if len(response) == 0 {
 		return "", fmt.Errorf("response is empty")
 	}
@@ -120,9 +122,6 @@ func (d *ThirdPartyAddressDetector) extractIP(response []byte, jsonpath string, 
 	if len(jsonpath) == 0 {
 		return "", fmt.Errorf("jsonpath is empty")
 	}
-
-	queryCtx, queryCancel := context.WithTimeout(ctx, 3*time.Second)
-	defer queryCancel()
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(response, &body); err != nil {
@@ -134,7 +133,9 @@ func (d *ThirdPartyAddressDetector) extractIP(response []byte, jsonpath string, 
 		return "", err
 	}
 
-	iter := query.RunWithContext(queryCtx, body)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	iter := query.RunWithContext(ctx, body)
 	var val string
 	for {
 		v, ok := iter.Next()
@@ -150,14 +151,13 @@ func (d *ThirdPartyAddressDetector) extractIP(response []byte, jsonpath string, 
 			return "", err
 		}
 		val = v.(string)
-		break
 	}
 
 	return val, nil
 }
 
-func (d *ThirdPartyAddressDetector) detectV4() (string, error) {
-	val, err := d.requestAddress()
+func (d *ThirdPartyAddressDetector) detectV4(parentCtx context.Context) (string, error) {
+	val, err := d.requestAddress(parentCtx)
 	if err != nil {
 		return "", err
 	}
@@ -175,8 +175,8 @@ func (d *ThirdPartyAddressDetector) detectV4() (string, error) {
 	return val, nil
 }
 
-func (d *ThirdPartyAddressDetector) detectV6() (string, error) {
-	val, err := d.requestAddress()
+func (d *ThirdPartyAddressDetector) detectV6(parentCtx context.Context) (string, error) {
+	val, err := d.requestAddress(parentCtx)
 	if err != nil {
 		return "", err
 	}
@@ -194,9 +194,9 @@ func (d *ThirdPartyAddressDetector) detectV6() (string, error) {
 	return val, nil
 }
 
-func (d *ThirdPartyAddressDetector) Detect() (string, error) {
+func (d *ThirdPartyAddressDetector) Detect(parentCtx context.Context) (string, error) {
 	if d.stack == config.IPv6 {
-		return d.detectV6()
+		return d.detectV6(parentCtx)
 	}
-	return d.detectV4()
+	return d.detectV4(parentCtx)
 }

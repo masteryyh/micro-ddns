@@ -17,11 +17,13 @@ limitations under the License.
 package ip
 
 import (
+	"context"
 	"fmt"
-	"github.com/masteryyh/micro-ddns/internal/config"
 	"log/slog"
 	"net"
 	"strings"
+
+	"github.com/masteryyh/micro-ddns/internal/config"
 )
 
 type IfaceAddressDetector struct {
@@ -128,7 +130,7 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 	return validAddr, nil
 }
 
-func (d *IfaceAddressDetector) Detect() (string, error) {
+func (d *IfaceAddressDetector) Detect(_ context.Context) (string, error) {
 	if d.stack == config.IPv6 {
 		return d.detect(false)
 	}

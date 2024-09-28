@@ -28,31 +28,24 @@ import (
 type DDNSInstanceManager struct {
 	instances map[string]*DDNSInstance
 	specs     []*config.DDNSSpec
-	ctx       context.Context
-	cancel    context.CancelFunc
 	scheduler gocron.Scheduler
 	logger    *slog.Logger
 }
 
-func NewDDNSInstanceManager(parentCtx context.Context, specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger) (*DDNSInstanceManager, error) {
-	ctx, cancel := context.WithCancel(parentCtx)
-
+func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger) (*DDNSInstanceManager, error) {
 	if len(specs) == 0 {
-		cancel()
 		return nil, fmt.Errorf("no ddns specs provided")
 	}
 
 	instances := make(map[string]*DDNSInstance, len(specs))
 	for _, spec := range specs {
 		if _, ok := instances[spec.Name]; ok {
-			cancel()
 			return nil, fmt.Errorf("DDNS instance %s already exists", spec.Name)
 		}
 
 		instanceLogger := logger.With(slog.Group("component", "type", "instance", "name", spec.Name))
-		instance, err := NewDDNSInstance(spec, ctx, instanceLogger)
+		instance, err := NewDDNSInstance(spec, instanceLogger)
 		if err != nil {
-			cancel()
 			return nil, err
 		}
 		instances[spec.Name] = instance
@@ -61,27 +54,24 @@ func NewDDNSInstanceManager(parentCtx context.Context, specs []*config.DDNSSpec,
 	return &DDNSInstanceManager{
 		instances: instances,
 		specs:     specs,
-		ctx:       ctx,
-		cancel:    cancel,
 		scheduler: scheduler,
 		logger:    logger,
 	}, nil
 }
 
-func (m *DDNSInstanceManager) Start() {
+func (m *DDNSInstanceManager) Start(parentCtx context.Context) {
 	for name, instance := range m.instances {
 		m.logger.Info("registering DDNS task", "name", name)
-		job, err := m.scheduler.NewJob(gocron.CronJob(instance.spec.Cron, false), gocron.NewTask(func(instance *DDNSInstance) {
-			err := instance.DoUpdate()
+		job, err := m.scheduler.NewJob(gocron.CronJob(instance.spec.Cron, false), gocron.NewTask(func(ctx context.Context, instance *DDNSInstance) {
+			err := instance.DoUpdate(ctx)
 			if err != nil {
 				m.logger.Error("failed to handle DNS update", "name", instance.spec.Name, "err", err)
 				return
 			}
 			m.logger.Info("successfully updated DNS record", "name", instance.spec.Name)
-		}, instance))
+		}, parentCtx, instance))
 		if err != nil {
 			m.logger.Error("failed to create job", "name", name, "err", err)
-			m.cancel()
 			return
 		}
 
@@ -90,7 +80,7 @@ func (m *DDNSInstanceManager) Start() {
 
 	m.scheduler.Start()
 
-	<-m.ctx.Done()
+	<-parentCtx.Done()
 	m.logger.Info("shutting down ddns scheduler")
 	if err := m.scheduler.Shutdown(); err != nil {
 		m.logger.Error(fmt.Sprintf("failed shutting down ddns scheduler: %v", err))

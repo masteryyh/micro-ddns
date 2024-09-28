@@ -16,6 +16,8 @@ limitations under the License.
 
 package dns
 
+import "context"
+
 type RecordType string
 
 const (
@@ -27,11 +29,11 @@ const (
 
 type DNSUpdateHandler interface {
 	// Get will get current IP address registered in DNS record
-	Get() (string, error)
+	Get(parentCtx context.Context) (string, error)
 
 	// Create will create new DNS record with address
-	Create(address string) error
+	Create(parentCtx context.Context, address string) error
 
 	// Update will update DNS record with new address
-	Update(newAddress string) error
+	Update(parentCtx context.Context, newAddress string) error
 }

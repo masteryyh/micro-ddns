@@ -41,16 +41,13 @@ type DNSPodDNSUpdateHandler struct {
 	recordType RecordType
 	line       string
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	client *dnspod.Client
-	logger *slog.Logger
-
 	domainId *uint64
 	recordId *uint64
+	client *dnspod.Client
+	logger *slog.Logger
 }
 
-func NewDNSPodDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.DNSPodSpec, parentCtx context.Context, logger *slog.Logger) (*DNSPodDNSUpdateHandler, error) {
+func NewDNSPodDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.DNSPodSpec, logger *slog.Logger) (*DNSPodDNSUpdateHandler, error) {
 	credential := common.NewCredential(spec.SecretID, spec.SecretKey)
 
 	pf := profile.NewClientProfile()
@@ -70,21 +67,18 @@ func NewDNSPodDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.DNSPodSpec, p
 		line = *spec.LineID
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
 	return &DNSPodDNSUpdateHandler{
 		domain:     ddns.Domain,
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
 		line:       line,
-		ctx:        ctx,
-		cancel:     cancel,
 		client:     client,
 		logger:     logger,
 	}, nil
 }
 
-func (h *DNSPodDNSUpdateHandler) findDomainId() error {
-	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+func (h *DNSPodDNSUpdateHandler) findDomainId(parentCtx context.Context) error {
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 
 	request := dnspod.NewDescribeDomainListRequest()
@@ -103,42 +97,6 @@ func (h *DNSPodDNSUpdateHandler) findDomainId() error {
 			break
 		}
 	}
-	if h.domainId == nil {
-		if *result.Response.DomainCountInfo.DomainTotal <= PerPageCount {
-			return fmt.Errorf("domain " + h.domain + " not exists in the account")
-		}
-
-		total := int(*result.Response.DomainCountInfo.DomainTotal)
-		pages := (total - PerPageCount) / PerPageCount
-		if pages%PerPageCount != 0 {
-			pages++
-		}
-
-		for i := 1; i <= pages; i++ {
-			time.Sleep(500 * time.Millisecond)
-
-			pageCtx, pageCancel := context.WithTimeout(h.ctx, 30*time.Second)
-			pageRequest := dnspod.NewDescribeDomainListRequest()
-			pageRequest.Keyword = &h.domain
-			pageRequest.Limit = utils.Int64Ptr(PerPageCount)
-			pageRequest.Offset = utils.Int64Ptr(int64(PerPageCount * i))
-			pageResult, err := h.client.DescribeDomainListWithContext(pageCtx, pageRequest)
-			if err != nil {
-				pageCancel()
-				return err
-			}
-
-			list = pageResult.Response.DomainList
-			for _, domain := range list {
-				if *domain.Name == h.domain {
-					h.logger.Debug("got domain id", "id", *domain.DomainId)
-					h.domainId = domain.DomainId
-					break
-				}
-			}
-			pageCancel()
-		}
-	}
 
 	if h.domainId == nil {
 		return fmt.Errorf("domain " + h.domain + " not exists in the account")
@@ -146,8 +104,8 @@ func (h *DNSPodDNSUpdateHandler) findDomainId() error {
 	return nil
 }
 
-func (h *DNSPodDNSUpdateHandler) findRecordId() (string, error) {
-	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+func (h *DNSPodDNSUpdateHandler) findRecordId(parentCtx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	request := dnspod.NewDescribeRecordListRequest()
 	request.Domain = utils.StringPtr("")
@@ -175,64 +133,23 @@ func (h *DNSPodDNSUpdateHandler) findRecordId() (string, error) {
 			return *record.Value, nil
 		}
 	}
-
-	if h.recordId == nil {
-		if *result.Response.RecordCountInfo.SubdomainCount <= PerPageCount {
-			return "", nil
-		}
-
-		total := int(*result.Response.RecordCountInfo.SubdomainCount)
-		pages := (total - PerPageCount) / PerPageCount
-		if pages%PerPageCount != 0 {
-			pages++
-		}
-
-		for i := 1; i <= pages; i++ {
-			time.Sleep(500 * time.Millisecond)
-
-			pageCtx, pageCancel := context.WithTimeout(h.ctx, 30*time.Second)
-			pageRequest := dnspod.NewDescribeRecordListRequest()
-			request.DomainId = h.domainId
-			request.Subdomain = &h.subdomain
-			request.RecordType = utils.StringPtr(string(h.recordType))
-			request.RecordLineId = &h.line
-			request.Limit = utils.Uint64Ptr(PerPageCount)
-			request.Offset = utils.Uint64Ptr(uint64(PerPageCount * i))
-			pageResult, err := h.client.DescribeRecordListWithContext(pageCtx, pageRequest)
-			if err != nil {
-				pageCancel()
-				return "", err
-			}
-
-			list = pageResult.Response.RecordList
-			for _, record := range list {
-				if *record.Name == h.subdomain {
-					h.recordId = record.RecordId
-					h.logger.Debug("got record id", "id", *record.RecordId)
-					pageCancel()
-					return *record.Value, nil
-				}
-			}
-			pageCancel()
-		}
-	}
 	return "", nil
 }
 
-func (h *DNSPodDNSUpdateHandler) Get() (string, error) {
+func (h *DNSPodDNSUpdateHandler) Get(parentCtx context.Context) (string, error) {
 	if h.domainId == nil {
 		h.logger.Debug("no domain id present, searching")
-		if err := h.findDomainId(); err != nil {
+		if err := h.findDomainId(parentCtx); err != nil {
 			return "", err
 		}
 	}
 
 	if h.recordId == nil {
 		h.logger.Debug("no record id present, searching")
-		return h.findRecordId()
+		return h.findRecordId(parentCtx)
 	}
 
-	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	request := dnspod.NewDescribeRecordRequest()
 	request.Domain = utils.StringPtr("")
@@ -251,13 +168,13 @@ func (h *DNSPodDNSUpdateHandler) Get() (string, error) {
 	return *result.Response.RecordInfo.Value, nil
 }
 
-func (h *DNSPodDNSUpdateHandler) Create(address string) error {
+func (h *DNSPodDNSUpdateHandler) Create(parentCtx context.Context, address string) error {
 	if h.domainId == nil {
 		return fmt.Errorf("domain id is empty")
 	}
 
 	h.logger.Debug("creating DNS record for domain " + h.subdomain + "." + h.domain)
-	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	request := dnspod.NewCreateRecordRequest()
 	request.Domain = utils.StringPtr("")
@@ -278,7 +195,7 @@ func (h *DNSPodDNSUpdateHandler) Create(address string) error {
 	return nil
 }
 
-func (h *DNSPodDNSUpdateHandler) Update(newAddress string) error {
+func (h *DNSPodDNSUpdateHandler) Update(parentCtx context.Context, newAddress string) error {
 	if h.domainId == nil {
 		return fmt.Errorf("domain id is empty")
 	}
@@ -288,7 +205,7 @@ func (h *DNSPodDNSUpdateHandler) Update(newAddress string) error {
 	}
 
 	h.logger.Debug("updating DNS record for domain " + h.subdomain + "." + h.domain)
-	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	request := dnspod.NewModifyRecordRequest()
 	request.Domain = utils.StringPtr("")

@@ -39,13 +39,11 @@ type CloudflareDNSUpdateHandler struct {
 	zoneId     string
 	recordId   string
 
-	ctx       context.Context
-	cancel    context.CancelFunc
 	apiClient *cloudflare.API
 	logger    *slog.Logger
 }
 
-func NewCloudflareDNSUpdateHandler(ddns *config.DDNSSpec, cloudflareSpec *config.CloudflareSpec, parentCtx context.Context, logger *slog.Logger) (*CloudflareDNSUpdateHandler, error) {
+func NewCloudflareDNSUpdateHandler(ddns *config.DDNSSpec, cloudflareSpec *config.CloudflareSpec, logger *slog.Logger) (*CloudflareDNSUpdateHandler, error) {
 	var client *cloudflare.API
 	if !utils.IsEmpty(cloudflareSpec.APIToken) {
 		c, err := cloudflare.NewWithAPIToken(utils.StringPtrToString(cloudflareSpec.APIToken))
@@ -66,20 +64,17 @@ func NewCloudflareDNSUpdateHandler(ddns *config.DDNSSpec, cloudflareSpec *config
 		recordType = AAAA
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
 	return &CloudflareDNSUpdateHandler{
 		domain:     ddns.Domain,
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
 		apiClient:  client,
-		ctx:        ctx,
-		cancel:     cancel,
 		logger:     logger,
 	}, nil
 }
 
-func (h *CloudflareDNSUpdateHandler) fetchZoneId() error {
-	zoneCtx, zoneCancel := context.WithTimeout(h.ctx, time.Second*30)
+func (h *CloudflareDNSUpdateHandler) fetchZoneId(parentCtx context.Context) error {
+	zoneCtx, zoneCancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer zoneCancel()
 
 	if h.zoneId == "" {
@@ -104,20 +99,19 @@ func (h *CloudflareDNSUpdateHandler) fetchZoneId() error {
 	return nil
 }
 
-func (h *CloudflareDNSUpdateHandler) Get() (string, error) {
-	ctx, cancel := context.WithCancel(h.ctx)
-	defer cancel()
-
+func (h *CloudflareDNSUpdateHandler) Get(parentCtx context.Context) (string, error) {
 	if h.zoneId == "" {
-		if err := h.fetchZoneId(); err != nil {
+		if err := h.fetchZoneId(parentCtx); err != nil {
 			return "", err
 		}
 	}
 
 	if h.recordId == "" {
 		h.logger.Debug("looking for current DNS record ID")
-		recordCtx, recordCancel := context.WithTimeout(ctx, time.Second*30)
-		records, resultInfo, err := h.apiClient.ListDNSRecords(recordCtx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.ListDNSRecordsParams{
+
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+		defer cancel()
+		records, _, err := h.apiClient.ListDNSRecords(ctx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.ListDNSRecordsParams{
 			Type: string(h.recordType),
 			ResultInfo: cloudflare.ResultInfo{
 				Page:    1,
@@ -125,61 +119,29 @@ func (h *CloudflareDNSUpdateHandler) Get() (string, error) {
 			},
 		})
 		if err != nil {
-			recordCancel()
 			return "", err
 		}
 
-		if resultInfo.Count > PerPageCount {
-			pages := resultInfo.Count/PerPageCount - 1
-			if resultInfo.Count%PerPageCount != 0 {
-				pages += 1
-			}
-
-			for i := 0; i < pages; i++ {
-				time.Sleep(500 * time.Millisecond)
-
-				additionalRecordCtx, additionalRecordCancel := context.WithTimeout(ctx, time.Second*30)
-				additionalRecords, _, err := h.apiClient.ListDNSRecords(additionalRecordCtx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.ListDNSRecordsParams{
-					Type: string(h.recordType),
-					ResultInfo: cloudflare.ResultInfo{
-						Page:    i + 2,
-						PerPage: PerPageCount,
-					},
-				})
-
-				if err != nil {
-					additionalRecordCancel()
-					recordCancel()
-					return "", err
-				}
-				if len(additionalRecords) > 0 {
-					records = append(records, additionalRecords...)
-				}
-				additionalRecordCancel()
-			}
-		}
-
+		fullDomain := h.subdomain + "." + h.domain
 		var id string
 		for _, record := range records {
-			if record.Name == h.subdomain {
+			if record.Name == fullDomain {
 				id = record.ID
 				break
 			}
 		}
 
 		if id == "" {
-			recordCancel()
 			return "", nil
 		}
-
+		h.recordId = id
 		h.logger.Debug("found DNS record id: " + id)
-		recordCancel()
 	}
 
-	dnsCtx, dnsCancel := context.WithTimeout(ctx, time.Second*30)
-	defer dnsCancel()
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*30)
+	defer cancel()
 	h.logger.Debug("getting DNS record detail for record ID " + h.recordId)
-	record, err := h.apiClient.GetDNSRecord(dnsCtx, cloudflare.ZoneIdentifier(h.zoneId), h.recordId)
+	record, err := h.apiClient.GetDNSRecord(ctx, cloudflare.ZoneIdentifier(h.zoneId), h.recordId)
 	if err != nil {
 		cfError := &cloudflare.NotFoundError{}
 		if errors.As(err, &cfError) {
@@ -190,15 +152,15 @@ func (h *CloudflareDNSUpdateHandler) Get() (string, error) {
 	return record.Content, nil
 }
 
-func (h *CloudflareDNSUpdateHandler) Create(address string) error {
+func (h *CloudflareDNSUpdateHandler) Create(parentCtx context.Context, address string) error {
 	if h.zoneId == "" {
 		h.logger.Debug("DNS zone ID is empty, searching")
-		if err := h.fetchZoneId(); err != nil {
+		if err := h.fetchZoneId(parentCtx); err != nil {
 			return err
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(h.ctx, time.Second*30)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 
 	h.logger.Debug("creating DNS record")
@@ -219,7 +181,7 @@ func (h *CloudflareDNSUpdateHandler) Create(address string) error {
 	return nil
 }
 
-func (h *CloudflareDNSUpdateHandler) Update(newAddress string) error {
+func (h *CloudflareDNSUpdateHandler) Update(parentCtx context.Context, newAddress string) error {
 	if h.zoneId == "" {
 		return fmt.Errorf("zoneId is empty")
 	}
@@ -228,7 +190,7 @@ func (h *CloudflareDNSUpdateHandler) Update(newAddress string) error {
 		return fmt.Errorf("recordId is empty")
 	}
 
-	ctx, cancel := context.WithTimeout(h.ctx, time.Second*30)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 
 	h.logger.Debug("updating DNS record for record ID " + h.recordId)

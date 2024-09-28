@@ -19,14 +19,16 @@ package dns
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strconv"
+	"time"
+
 	"github.com/jdcloud-api/jdcloud-sdk-go/core"
 	"github.com/jdcloud-api/jdcloud-sdk-go/services/domainservice/apis"
 	"github.com/jdcloud-api/jdcloud-sdk-go/services/domainservice/client"
 	"github.com/jdcloud-api/jdcloud-sdk-go/services/domainservice/models"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/pkg/utils"
-	"log/slog"
-	"strconv"
 )
 
 const (
@@ -42,13 +44,11 @@ type JDCloudDNSUpdateHandler struct {
 	recordId   *int
 	viewId     int
 
-	ctx    context.Context
-	cancel context.CancelFunc
 	client *client.DomainserviceClient
 	logger *slog.Logger
 }
 
-func NewJDCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.JDCloudSpec, parentCtx context.Context, logger *slog.Logger) (*JDCloudDNSUpdateHandler, error) {
+func NewJDCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.JDCloudSpec, logger *slog.Logger) (*JDCloudDNSUpdateHandler, error) {
 	cred := core.NewCredentials(spec.AccessKey, spec.SecretKey)
 	dnsClient := client.NewDomainserviceClient(cred)
 	dnsClient.SetLogger(core.NewDefaultLogger(core.LogWarn))
@@ -63,91 +63,125 @@ func NewJDCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.JDCloudSpec,
 		view = *spec.ViewID
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
 	return &JDCloudDNSUpdateHandler{
 		domain:     ddns.Domain,
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
 		viewId:     view,
-		ctx:        ctx,
-		cancel:     cancel,
 		client:     dnsClient,
 		logger:     logger,
 	}, nil
 }
 
-func (h *JDCloudDNSUpdateHandler) Get() (string, error) {
+func (h *JDCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, error) {
 	if h.domainId == nil {
 		h.logger.Debug("domain id is empty, searching")
 
-		request := apis.NewDescribeDomainsRequestWithAllParams("jdcloud-api", 1, JDCloudPageSize, &h.domain, nil)
-		result, err := h.client.DescribeDomains(request)
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+		defer cancel()
+		result, err := utils.RunWithContext(ctx, func() (int, error) {
+			request := apis.NewDescribeDomainsRequestWithAllParams("jdcloud-api", 1, JDCloudPageSize, &h.domain, nil)
+			result, err := h.client.DescribeDomains(request)
+			if err != nil {
+				return -1, err
+			}
+			if result.Error.Code != 0 {
+				return -1, fmt.Errorf(result.Error.Message)
+			}
+
+			for _, domain := range result.Result.DataList {
+				if h.domain == domain.DomainName {
+					return domain.Id, nil
+				}
+			}
+			return -1, fmt.Errorf("domain " + h.domain + " not exists")
+		})
 		if err != nil {
 			return "", err
 		}
-		if result.Error.Code != 0 {
-			return "", fmt.Errorf(result.Error.Message)
+
+		if result[1] != nil {
+			return "", result[1].(error)
 		}
 
-		id := utils.IntPtr(-1)
-		for _, domain := range result.Result.DataList {
-			if h.domain == domain.DomainName {
-				*id = domain.Id
-				h.logger.Debug("got domain id " + strconv.Itoa(*id))
-				break
-			}
-		}
-
-		if *id == -1 {
-			return "", fmt.Errorf("domain " + h.domain + " not exists")
-		}
-		h.domainId = id
+		val := result[0].(int)
+		h.logger.Debug("got domain id " + strconv.Itoa(val))
+		h.domainId = &val
 	}
 
-	request := apis.NewDescribeResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), utils.IntPtr(1), utils.IntPtr(JDCloudPageSize), &h.subdomain)
-	result, err := h.client.DescribeResourceRecord(request)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() (int, string, error) {
+		request := apis.NewDescribeResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), utils.IntPtr(1), utils.IntPtr(JDCloudPageSize), &h.subdomain)
+		result, err := h.client.DescribeResourceRecord(request)
+		if err != nil {
+			return -1, "", err
+		}
+		if result.Error.Code != 0 {
+			return -1, "", fmt.Errorf(result.Error.Message)
+		}
+
+		for _, record := range result.Result.DataList {
+			if h.subdomain == record.HostRecord {
+				return record.Id, record.HostValue, nil
+			}
+		}
+		return -1, "", nil
+	})
 	if err != nil {
 		return "", err
 	}
-	if result.Error.Code != 0 {
-		return "", fmt.Errorf(result.Error.Message)
+
+	if result[2] != nil {
+		return "", result[2].(error)
 	}
 
-	for _, record := range result.Result.DataList {
-		if h.subdomain == record.HostRecord {
-			h.logger.Debug("got record id " + strconv.Itoa(record.Id))
-			h.recordId = &record.Id
-			return record.HostValue, nil
-		}
+	id, addr := result[0].(int), result[1].(string)
+	if id == -1 {
+		return "", nil
 	}
-	return "", nil
+	h.logger.Debug("got record id " + strconv.Itoa(id))
+	return addr, nil
 }
 
-func (h *JDCloudDNSUpdateHandler) Create(address string) error {
+func (h *JDCloudDNSUpdateHandler) Create(parentCtx context.Context, address string) error {
 	if h.domainId == nil {
 		return fmt.Errorf("domain id is empty")
 	}
 
-	request := apis.NewCreateResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), &models.AddRR{
-		HostRecord: h.subdomain,
-		HostValue:  address,
-		Type:       string(h.recordType),
-		ViewValue:  h.viewId,
-		Ttl:        JDCloudDefaultTTL,
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() (int, error) {
+		request := apis.NewCreateResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), &models.AddRR{
+			HostRecord: h.subdomain,
+			HostValue:  address,
+			Type:       string(h.recordType),
+			ViewValue:  h.viewId,
+			Ttl:        JDCloudDefaultTTL,
+		})
+		result, err := h.client.CreateResourceRecord(request)
+		if err != nil {
+			return -1, err
+		}
+		if result.Error.Code != 0 {
+			return -1, fmt.Errorf(result.Error.Message)
+		}
+		return result.Result.DataList.Id, nil
 	})
-	result, err := h.client.CreateResourceRecord(request)
 	if err != nil {
 		return err
 	}
-	if result.Error.Code != 0 {
-		return fmt.Errorf(result.Error.Message)
+
+	if result[1] != nil {
+		return result[1].(error)
 	}
 
-	h.recordId = &result.Result.DataList.Id
+	val := result[0].(int)
+	h.recordId = &val
 	return nil
 }
 
-func (h *JDCloudDNSUpdateHandler) Update(newAddress string) error {
+func (h *JDCloudDNSUpdateHandler) Update(parentCtx context.Context, newAddress string) error {
 	if h.domainId == nil {
 		return fmt.Errorf("domain id is empty")
 	}
@@ -156,20 +190,32 @@ func (h *JDCloudDNSUpdateHandler) Update(newAddress string) error {
 		return fmt.Errorf("record id is empty")
 	}
 
-	request := apis.NewModifyResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
-		DomainName: h.domain,
-		HostRecord: h.subdomain,
-		HostValue:  newAddress,
-		Ttl:        JDCloudDefaultTTL,
-		Type:       string(h.recordType),
-		ViewValue:  h.viewId,
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() error {
+		request := apis.NewModifyResourceRecordRequestWithAllParams("jdcloud-api", strconv.Itoa(*h.domainId), strconv.Itoa(*h.recordId), &models.UpdateRR{
+			DomainName: h.domain,
+			HostRecord: h.subdomain,
+			HostValue:  newAddress,
+			Ttl:        JDCloudDefaultTTL,
+			Type:       string(h.recordType),
+			ViewValue:  h.viewId,
+		})
+		result, err := h.client.ModifyResourceRecord(request)
+		if err != nil {
+			return err
+		}
+		if result.Error.Code != 0 {
+			return fmt.Errorf(result.Error.Message)
+		}
+		return nil
 	})
-	result, err := h.client.ModifyResourceRecord(request)
 	if err != nil {
 		return err
 	}
-	if result.Error.Code != 0 {
-		return fmt.Errorf(result.Error.Message)
+
+	if result[0] != nil {
+		return result[0].(error)
 	}
 	return nil
 }

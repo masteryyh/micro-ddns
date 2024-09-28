@@ -16,8 +16,10 @@ limitations under the License.
 
 package ip
 
+import "context"
+
 // AddressDetector is the general interface for IP address detector
 type AddressDetector interface {
 	// Detect will try to detect IP address or return an error
-	Detect() (string, error)
+	Detect(parentCtx context.Context) (string, error)
 }
