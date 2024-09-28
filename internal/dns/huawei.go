@@ -20,6 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/sdkerr"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/as/v1/region"
@@ -27,7 +30,6 @@ import (
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2/model"
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/pkg/utils"
-	"log/slog"
 )
 
 const HuaweiCloudDefaultTTL = 120
@@ -39,13 +41,11 @@ type HuaweiCloudDNSUpdateHandler struct {
 	zoneId      string
 	recordSetId string
 
-	ctx    context.Context
-	cancel context.CancelFunc
 	client *huaweiv2.DnsClient
 	logger *slog.Logger
 }
 
-func NewHuaweiCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.HuaweiCloudSpec, parentCtx context.Context, logger *slog.Logger) (*HuaweiCloudDNSUpdateHandler, error) {
+func NewHuaweiCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.HuaweiCloudSpec, logger *slog.Logger) (*HuaweiCloudDNSUpdateHandler, error) {
 	cred, err := basic.NewCredentialsBuilder().WithAk(spec.AccessKey).WithSk(spec.SecretAccessKey).SafeBuild()
 	if err != nil {
 		return nil, err
@@ -70,109 +70,157 @@ func NewHuaweiCloudDNSUpdateHandler(ddns *config.DDNSSpec, spec *config.HuaweiCl
 		recordType = AAAA
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
 	return &HuaweiCloudDNSUpdateHandler{
 		// Add a dot at the end of the domain for compatibility
 		domain:     ddns.Domain + ".",
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
-		ctx:        ctx,
-		cancel:     cancel,
 		client:     client,
 		logger:     logger,
 	}, nil
 }
 
-func (h *HuaweiCloudDNSUpdateHandler) Get() (string, error) {
+func (h *HuaweiCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, error) {
 	if h.zoneId == "" {
 		h.logger.Debug("zone id not present, searching")
-		result, err := h.client.ListPublicZones(&model.ListPublicZonesRequest{
-			Name:       utils.StringPtr(h.domain),
-			SearchMode: utils.StringPtr("equal"),
+
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+		defer cancel()
+		result, err := utils.RunWithContext(ctx, func() (string, error) {
+			result, err := h.client.ListPublicZones(&model.ListPublicZonesRequest{
+				Name:       utils.StringPtr(h.domain),
+				SearchMode: utils.StringPtr("equal"),
+			})
+			if err != nil {
+				return "", err
+			}
+
+			for _, zone := range *result.Zones {
+				if h.domain == *zone.Name {
+					return *zone.Id, nil
+				}
+			}
+			return "", fmt.Errorf("zone " + h.domain + " not exists")
 		})
 		if err != nil {
 			return "", err
 		}
 
-		var id string
-		for _, zone := range *result.Zones {
-			if h.domain == *zone.Name {
-				id = *zone.Id
-				break
-			}
+		val := result[0].(string)
+		if result[1] != nil {
+			return "", result[1].(error)
 		}
 
-		if id == "" {
-			return "", fmt.Errorf("zone " + h.domain + " not exists")
-		}
-		h.logger.Debug("got zone id " + id)
-		h.zoneId = id
+		h.logger.Debug("got zone id " + val)
+		h.zoneId = val
 	}
 
 	if h.recordSetId == "" {
 		h.logger.Debug("record id not present, searching")
-		result, err := h.client.ListRecordSetsByZone(&model.ListRecordSetsByZoneRequest{
-			ZoneId:     h.zoneId,
-			Type:       utils.StringPtr(string(h.recordType)),
-			Name:       utils.StringPtr(h.subdomain),
-			SearchMode: utils.StringPtr("equal"),
+
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+		defer cancel()
+		result, err := utils.RunWithContext(ctx, func() (string, error) {
+			result, err := h.client.ListRecordSetsByZone(&model.ListRecordSetsByZoneRequest{
+				ZoneId:     h.zoneId,
+				Type:       utils.StringPtr(string(h.recordType)),
+				Name:       utils.StringPtr(h.subdomain),
+				SearchMode: utils.StringPtr("equal"),
+			})
+			if err != nil {
+				return "", err
+			}
+
+			for _, record := range *result.Recordsets {
+				if h.subdomain == *record.Name {
+					h.logger.Debug("got record id " + *record.Id)
+					return (*record.Records)[0], nil
+				}
+			}
+
+			return "", nil
 		})
 		if err != nil {
 			return "", err
 		}
 
-		for _, record := range *result.Recordsets {
-			if h.subdomain == *record.Name {
-				h.logger.Debug("got record id " + *record.Id)
-				h.recordSetId = *record.Id
-				return (*record.Records)[0], nil
-			}
+		if result[1] != nil {
+			return "", result[1].(error)
 		}
-		return "", nil
+
+		val := result[0].(string)
+		if val == "" {
+			return "", nil
+		}
+		h.recordSetId = val
 	}
 
-	result, err := h.client.ShowRecordSet(&model.ShowRecordSetRequest{
-		ZoneId:      h.zoneId,
-		RecordsetId: h.recordSetId,
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() (string, error) {
+		result, err := h.client.ShowRecordSet(&model.ShowRecordSetRequest{
+			ZoneId:      h.zoneId,
+			RecordsetId: h.recordSetId,
+		})
+		if err != nil {
+			hwErr := &sdkerr.ServiceResponseError{}
+			if errors.As(err, &hwErr) {
+				if hwErr.StatusCode == 404 {
+					return "", nil
+				}
+			}
+			return "", err
+		}
+		return (*result.Records)[0], nil
 	})
 	if err != nil {
-		hwErr := &sdkerr.ServiceResponseError{}
-		if errors.As(err, &hwErr) {
-			if hwErr.StatusCode == 404 {
-				return "", nil
-			}
-		}
 		return "", err
 	}
-	return (*result.Records)[0], nil
+
+	if result[1] != nil {
+		return "", result[1].(error)
+	}
+	return result[0].(string), nil
 }
 
-func (h *HuaweiCloudDNSUpdateHandler) Create(address string) error {
+func (h *HuaweiCloudDNSUpdateHandler) Create(parentCtx context.Context, address string) error {
 	if h.zoneId == "" {
 		return fmt.Errorf("zone id is empty")
 	}
 
 	h.logger.Debug("creating DNS record for address " + address)
-	fqdn := h.subdomain + "." + h.domain
-	result, err := h.client.CreateRecordSet(&model.CreateRecordSetRequest{
-		ZoneId: h.zoneId,
-		Body: &model.CreateRecordSetRequestBody{
-			Name:        fqdn,
-			Description: utils.StringPtr(Comment),
-			Type:        string(h.recordType),
-			Records:     []string{address},
-			Ttl:         utils.Int32Ptr(HuaweiCloudDefaultTTL),
-		},
+
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() (string, error) {
+		fqdn := h.subdomain + "." + h.domain
+		result, err := h.client.CreateRecordSet(&model.CreateRecordSetRequest{
+			ZoneId: h.zoneId,
+			Body: &model.CreateRecordSetRequestBody{
+				Name:        fqdn,
+				Description: utils.StringPtr(Comment),
+				Type:        string(h.recordType),
+				Records:     []string{address},
+				Ttl:         utils.Int32Ptr(HuaweiCloudDefaultTTL),
+			},
+		})
+		if err != nil {
+			return "", err
+		}
+		return *result.Id, nil
 	})
 	if err != nil {
 		return err
 	}
 
-	h.recordSetId = *result.Id
+	if result[1] != nil {
+		return result[1].(error)
+	}
+	h.recordSetId = result[0].(string)
 	return nil
 }
 
-func (h *HuaweiCloudDNSUpdateHandler) Update(newAddress string) error {
+func (h *HuaweiCloudDNSUpdateHandler) Update(parentCtx context.Context, newAddress string) error {
 	if h.zoneId == "" {
 		return fmt.Errorf("zone id is empty")
 	}
@@ -182,17 +230,30 @@ func (h *HuaweiCloudDNSUpdateHandler) Update(newAddress string) error {
 	}
 
 	h.logger.Debug("updating DNS record for address " + newAddress)
-	fqdn := h.subdomain + "." + h.domain
-	_, err := h.client.UpdateRecordSet(&model.UpdateRecordSetRequest{
-		ZoneId:      h.zoneId,
-		RecordsetId: h.recordSetId,
-		Body: &model.UpdateRecordSetReq{
-			Name:        &fqdn,
-			Description: utils.StringPtr(Comment),
-			Type:        utils.StringPtr(string(h.recordType)),
-			Ttl:         utils.Int32Ptr(HuaweiCloudDefaultTTL),
-			Records:     &[]string{newAddress},
-		},
+
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	defer cancel()
+	result, err := utils.RunWithContext(ctx, func() error {
+		fqdn := h.subdomain + "." + h.domain
+		_, err := h.client.UpdateRecordSet(&model.UpdateRecordSetRequest{
+			ZoneId:      h.zoneId,
+			RecordsetId: h.recordSetId,
+			Body: &model.UpdateRecordSetReq{
+				Name:        &fqdn,
+				Description: utils.StringPtr(Comment),
+				Type:        utils.StringPtr(string(h.recordType)),
+				Ttl:         utils.Int32Ptr(HuaweiCloudDefaultTTL),
+				Records:     &[]string{newAddress},
+			},
+		})
+		return err
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if result[0] != nil {
+		return result[0].(error)
+	}
+	return nil
 }

@@ -27,11 +27,10 @@ import (
 
 type MetricsServer struct {
 	server    *http.Server
-	parentCtx context.Context
 	logger    *slog.Logger
 }
 
-func NewMetricsServer(parentCtx context.Context, logger *slog.Logger) *MetricsServer {
+func NewMetricsServer(logger *slog.Logger) *MetricsServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(response http.ResponseWriter, request *http.Request) {
 		response.Write([]byte("pong"))
@@ -43,12 +42,11 @@ func NewMetricsServer(parentCtx context.Context, logger *slog.Logger) *MetricsSe
 
 	return &MetricsServer{
 		server:    server,
-		parentCtx: parentCtx,
 		logger:    logger,
 	}
 }
 
-func (s *MetricsServer) Serve() {
+func (s *MetricsServer) Serve(parentCtx context.Context) {
 	s.logger.Info("starting metrics server")
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -56,7 +54,7 @@ func (s *MetricsServer) Serve() {
 		}
 	}()
 
-	<-s.parentCtx.Done()
+	<-parentCtx.Done()
 	s.logger.Info("shutting down metrics server")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

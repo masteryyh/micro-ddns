@@ -37,16 +37,15 @@ type RFC2136DNSUpdateHandler struct {
 	recordType RecordType
 	server     string
 
+	spec       *config.RFC2136Spec
 	gssKeyName string
 	keyName    string
 	lastRR     string
-	ctx        context.Context
-	cancel     context.CancelFunc
 	client     *dns.Client
 	logger     *slog.Logger
 }
 
-func NewRFC2136DNSUpdateHandler(ddns *config.DDNSSpec, spec *config.RFC2136Spec, parentCtx context.Context, logger *slog.Logger) (*RFC2136DNSUpdateHandler, error) {
+func NewRFC2136DNSUpdateHandler(ddns *config.DDNSSpec, spec *config.RFC2136Spec, logger *slog.Logger) (*RFC2136DNSUpdateHandler, error) {
 	port := 53
 	if spec.Port != nil {
 		port = *spec.Port
@@ -57,53 +56,58 @@ func NewRFC2136DNSUpdateHandler(ddns *config.DDNSSpec, spec *config.RFC2136Spec,
 		recordType = AAAA
 	}
 
-	client := &dns.Client{}
-	if spec.UseTCP != nil && *spec.UseTCP {
-		client.Net = "tcp"
-	}
-
-	ctx, cancel := context.WithCancel(parentCtx)
 	server := spec.Address + ":" + strconv.Itoa(port)
 	handler := &RFC2136DNSUpdateHandler{
 		domain:     ddns.Domain,
 		subdomain:  ddns.Subdomain,
 		recordType: recordType,
 		server:     server,
-		client:     client,
-		ctx:        ctx,
-		cancel:     cancel,
+		spec:       spec,
 		logger:     logger,
-	}
-
-	if spec.TSIG != nil {
-		hmac := tsig.HMAC{
-			dns.Fqdn(spec.TSIG.KeyName): spec.TSIG.Key,
-		}
-		client.TsigProvider = hmac
-	} else if spec.GSSTSIG != nil {
-		gssClient, err := gss.NewClient(client)
-		if err != nil {
-			return nil, err
-		}
-		keyName, _, err := gssClient.NegotiateContextWithCredentials(server, spec.GSSTSIG.Domain, spec.GSSTSIG.Username, spec.GSSTSIG.Password)
-		if err != nil {
-			return nil, err
-		}
-		handler.gssKeyName = keyName
-		client.TsigProvider = gssClient
-
-		go func(client *gss.Client) {
-			<-ctx.Done()
-			if gssClient != nil {
-				gssClient.Close()
-			}
-		}(gssClient)
 	}
 
 	return handler, nil
 }
 
-func (h *RFC2136DNSUpdateHandler) Get() (string, error) {
+func (h *RFC2136DNSUpdateHandler) negotiate(ctx context.Context) error {
+	client := &dns.Client{}
+	if h.spec.UseTCP != nil && *h.spec.UseTCP {
+		client.Net = "tcp"
+	}
+
+	if h.spec.TSIG != nil {
+		hmac := tsig.HMAC{
+			dns.Fqdn(h.spec.TSIG.KeyName): h.spec.TSIG.Key,
+		}
+		h.client.TsigProvider = hmac
+	} else if h.spec.GSSTSIG != nil {
+		gssClient, err := gss.NewClient(client)
+		if err != nil {
+			return err
+		}
+		keyName, _, err := gssClient.NegotiateContextWithCredentials(h.server, h.spec.GSSTSIG.Domain, h.spec.GSSTSIG.Username, h.spec.GSSTSIG.Password)
+		if err != nil {
+			return err
+		}
+
+		h.gssKeyName = keyName
+		client.TsigProvider = gssClient
+
+		go func(client *gss.Client) {
+			<-ctx.Done()
+			if client != nil {
+				client.Close()
+				h.gssKeyName = ""
+				h.client = nil
+			}
+		}(gssClient)
+	}
+
+	h.client = client
+	return nil
+}
+
+func (h *RFC2136DNSUpdateHandler) Get(parentCtx context.Context) (string, error) {
 	message := &dns.Msg{
 		MsgHdr: dns.MsgHdr{
 			Id:               dns.Id(),
@@ -125,8 +129,11 @@ func (h *RFC2136DNSUpdateHandler) Get() (string, error) {
 	}
 
 	h.logger.Debug("querying DNS server for current address")
-	ctx, cancel := context.WithTimeout(h.ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 	defer cancel()
+	if err := h.negotiate(ctx); err != nil {
+		return "", err
+	}
 	result, _, err := h.client.ExchangeContext(ctx, message, h.server)
 	if err != nil {
 		return "", err
@@ -152,7 +159,7 @@ func (h *RFC2136DNSUpdateHandler) Get() (string, error) {
 	return "", nil
 }
 
-func (h *RFC2136DNSUpdateHandler) Create(address string) error {
+func (h *RFC2136DNSUpdateHandler) Create(parentCtx context.Context, address string) error {
 	h.logger.Debug("creating DNS record for address " + address)
 	message := &dns.Msg{}
 	message.SetUpdate(dns.Fqdn(h.domain))
@@ -165,15 +172,19 @@ func (h *RFC2136DNSUpdateHandler) Create(address string) error {
 	}
 	message.Insert([]dns.RR{rr})
 
+	h.logger.Debug("RR about to create: " + rr.String())
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
+	defer cancel()
+	if err := h.negotiate(ctx); err != nil {
+		return err
+	}
+
 	if h.gssKeyName != "" {
 		message.SetTsig(h.gssKeyName, tsig.GSS, 300, time.Now().Unix())
 	} else if h.keyName != "" {
 		message.SetTsig(h.keyName, dns.HmacSHA256, 300, time.Now().Unix())
 	}
 
-	h.logger.Debug("RR about to create: " + rr.String())
-	ctx, cancel := context.WithTimeout(h.ctx, 3*time.Second)
-	defer cancel()
 	_, _, err = h.client.ExchangeContext(ctx, message, h.server)
 	if err != nil {
 		return err
@@ -183,7 +194,7 @@ func (h *RFC2136DNSUpdateHandler) Create(address string) error {
 	return nil
 }
 
-func (h *RFC2136DNSUpdateHandler) Update(newAddress string) error {
+func (h *RFC2136DNSUpdateHandler) Update(parentCtx context.Context, newAddress string) error {
 	h.logger.Debug("updating DNS record for new address " + newAddress)
 	if h.lastRR == "" {
 		return fmt.Errorf("last address unknown")
@@ -206,15 +217,19 @@ func (h *RFC2136DNSUpdateHandler) Update(newAddress string) error {
 	}
 	message.Remove([]dns.RR{oldRr})
 
+	h.logger.Debug("RR about to update: " + rr.String())
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
+	defer cancel()
+	if err := h.negotiate(ctx); err != nil {
+		return err
+	}
+
 	if h.gssKeyName != "" {
 		message.SetTsig(h.gssKeyName, tsig.GSS, 300, time.Now().Unix())
 	} else if h.keyName != "" {
 		message.SetTsig(h.keyName, dns.HmacSHA256, 300, time.Now().Unix())
 	}
 
-	h.logger.Debug("RR about to update: " + rr.String())
-	ctx, cancel := context.WithTimeout(h.ctx, 3*time.Second)
-	defer cancel()
 	_, _, err = h.client.ExchangeContext(ctx, message, h.server)
 	if err != nil {
 		return err

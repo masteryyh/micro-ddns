@@ -29,8 +29,8 @@ func RunWithContext(ctx context.Context, function interface{}, args ...interface
 	}
 
 	input := make([]reflect.Value, len(args))
-	for _, arg := range args {
-		input = append(input, reflect.ValueOf(arg))
+	for i, arg := range args {
+		input[i] = reflect.ValueOf(arg)
 	}
 
 	resultChan := make(chan []reflect.Value)
@@ -43,8 +43,8 @@ func RunWithContext(ctx context.Context, function interface{}, args ...interface
 		return nil, ctx.Err()
 	case results := <-resultChan:
 		returns := make([]interface{}, len(results))
-		for _, v := range results {
-			returns = append(returns, v.Interface())
+		for i, v := range results {
+			returns[i] = v.Interface()
 		}
 		return returns, nil
 	}
