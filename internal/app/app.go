@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/masteryyh/micro-ddns/internal/config"
@@ -29,9 +30,10 @@ import (
 )
 
 type App struct {
-	manager *ddns.DDNSInstanceManager
-	logger  *slog.Logger
-	metrics *metrics.MetricsServer
+	manager    *ddns.DDNSInstanceManager
+	logger     *slog.Logger
+	metrics    *metrics.MetricsServer
+	shutdownWg *sync.WaitGroup
 }
 
 func initLogger(level int) (*slog.Logger, error) {
@@ -63,16 +65,19 @@ func NewApp(logLevel int, configFile string) (*App, error) {
 		return nil, err
 	}
 
-	manager, err := ddns.NewDDNSInstanceManager(configs.DDNS, scheduler, logger)
+	var wg sync.WaitGroup
+
+	manager, err := ddns.NewDDNSInstanceManager(configs.DDNS, scheduler, logger, &wg)
 	if err != nil {
 		return nil, err
 	}
 
 	metricsLogger := logger.With(slog.Group("component", "type", "metrics"))
 	return &App{
-		logger:  logger,
-		manager: manager,
-		metrics: metrics.NewMetricsServer(metricsLogger),
+		logger:     logger,
+		manager:    manager,
+		metrics:    metrics.NewMetricsServer(metricsLogger, &wg),
+		shutdownWg: &wg,
 	}, nil
 }
 
@@ -87,4 +92,5 @@ func (a *App) Run() {
 
 	<-ctx.Done()
 	a.logger.Info("shutting down")
+	a.shutdownWg.Wait()
 }
