@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/masteryyh/micro-ddns/internal/config"
@@ -30,9 +31,10 @@ type DDNSInstanceManager struct {
 	specs     []*config.DDNSSpec
 	scheduler gocron.Scheduler
 	logger    *slog.Logger
+	wg        *sync.WaitGroup
 }
 
-func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger) (*DDNSInstanceManager, error) {
+func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger, wg *sync.WaitGroup) (*DDNSInstanceManager, error) {
 	if len(specs) == 0 {
 		return nil, fmt.Errorf("no ddns specs provided")
 	}
@@ -51,11 +53,13 @@ func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler
 		instances[spec.Name] = instance
 	}
 
+	wg.Add(1)
 	return &DDNSInstanceManager{
 		instances: instances,
 		specs:     specs,
 		scheduler: scheduler,
 		logger:    logger,
+		wg:        wg,
 	}, nil
 }
 
@@ -85,4 +89,5 @@ func (m *DDNSInstanceManager) Start(parentCtx context.Context) {
 	if err := m.scheduler.Shutdown(); err != nil {
 		m.logger.Error(fmt.Sprintf("failed shutting down ddns scheduler: %v", err))
 	}
+	m.wg.Done()
 }

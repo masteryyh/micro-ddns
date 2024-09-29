@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type MetricsServer struct {
-	server    *http.Server
-	logger    *slog.Logger
+	server *http.Server
+	logger *slog.Logger
+	wg     *sync.WaitGroup
 }
 
-func NewMetricsServer(logger *slog.Logger) *MetricsServer {
+func NewMetricsServer(logger *slog.Logger, wg *sync.WaitGroup) *MetricsServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(response http.ResponseWriter, request *http.Request) {
 		response.Write([]byte("pong"))
@@ -40,9 +42,11 @@ func NewMetricsServer(logger *slog.Logger) *MetricsServer {
 		Handler: mux,
 	}
 
+	wg.Add(1)
 	return &MetricsServer{
-		server:    server,
-		logger:    logger,
+		server: server,
+		logger: logger,
+		wg:     wg,
 	}
 }
 
@@ -61,4 +65,5 @@ func (s *MetricsServer) Serve(parentCtx context.Context) {
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Error(fmt.Sprintf("failed shutting down metrics server: %v", err))
 	}
+	s.wg.Done()
 }
