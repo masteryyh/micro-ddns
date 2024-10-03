@@ -22,6 +22,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/masteryyh/micro-ddns/pkg/utils"
 	"gopkg.in/yaml.v3"
@@ -70,8 +71,10 @@ const (
 // DNSProviderSpec is the specification of DNS provider, currently only Cloudflare
 // is supported
 type DNSProviderSpec struct {
-	// Name is the name of DNS provider
-	Name DNSProvider `json:"name" yaml:"name"`
+	// Name of the provider specification
+	Name string `json:"name" yaml:"name"`
+
+	providerType DNSProvider
 
 	Cloudflare *CloudflareSpec `json:"cloudflare,omitempty" yaml:"cloudflare,omitempty"`
 
@@ -87,10 +90,6 @@ type DNSProviderSpec struct {
 }
 
 func (spec *DNSProviderSpec) Validate() error {
-	if spec.Name == "" {
-		return fmt.Errorf("provider name cannot be empty")
-	}
-
 	count := 0
 	if spec.Cloudflare != nil {
 		count++
@@ -120,20 +119,30 @@ func (spec *DNSProviderSpec) Validate() error {
 	}
 
 	if spec.Cloudflare != nil {
-		return spec.Validate()
+		spec.providerType = DNSProviderCloudflare
+		return spec.Cloudflare.Validate()
 	} else if spec.AliCloud != nil {
+		spec.providerType = DNSProviderAliCloud
 		return spec.AliCloud.Validate()
 	} else if spec.DNSPod != nil {
+		spec.providerType = DNSProviderDNSPod
 		return spec.DNSPod.Validate()
 	} else if spec.Huawei != nil {
+		spec.providerType = DNSProviderHuaweiCloud
 		return spec.Huawei.Validate()
 	} else if spec.JD != nil {
+		spec.providerType = DNSProviderJDCloud
 		return spec.JD.Validate()
 	} else if spec.RFC2136 != nil {
+		spec.providerType = DNSProviderRFC2136
 		return spec.RFC2136.Validate()
 	}
 
 	return nil
+}
+
+func (spec *DNSProviderSpec) GetType() DNSProvider {
+	return spec.providerType
 }
 
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface
@@ -185,9 +194,10 @@ func (spec *ThirdPartyServiceSpec) Validate() error {
 
 // AddressDetectionSpec defines how should we detect current IP address
 type AddressDetectionSpec struct {
-	// Type is the type of address detection method
-	// Currently we can acquire address by network interface or 3rd-party API
-	Type AddressDetectionType `json:"type" yaml:"type"`
+	// Name of this address detection specification
+	Name string `json:"name" yaml:"name"`
+
+	detectionType AddressDetectionType
 
 	// LocalAddressPolicy defines how should we process addresses
 	// LocalAddressPolicyIgnore means the operation would fail when no public address presents on the interface
@@ -201,15 +211,6 @@ type AddressDetectionSpec struct {
 }
 
 func (spec *AddressDetectionSpec) Validate() error {
-	t := string(spec.Type)
-	if t == "" {
-		return fmt.Errorf("detection type is needed")
-	}
-
-	if t != "Interface" && t != "ThirdParty" {
-		return fmt.Errorf("unknown detection type %s", t)
-	}
-
 	if spec.LocalAddressPolicy == nil {
 		spec.LocalAddressPolicy = (*LocalAddressPolicy)(utils.StringPtr("Ignore"))
 	}
@@ -219,15 +220,18 @@ func (spec *AddressDetectionSpec) Validate() error {
 		return fmt.Errorf("unknown localAddressPolicy %s", p)
 	}
 
-	if spec.Interface == nil && spec.API == nil {
-		return fmt.Errorf("must define a address detection method")
-	}
-
 	if spec.Interface != nil {
+		spec.detectionType = AddressDetectionIface
 		return spec.Interface.Validate()
-	} else {
+	} else if spec.API != nil {
+		spec.detectionType = AddressDetectionThirdParty
 		return spec.API.Validate()
 	}
+	return fmt.Errorf("must specify a detection method")
+}
+
+func (spec *AddressDetectionSpec) GetDetectionType() AddressDetectionType {
+	return spec.detectionType
 }
 
 // DDNSSpec is the specification of DDNS service
@@ -247,9 +251,15 @@ type DDNSSpec struct {
 	// Cron is the cron expression about how should we schedule this task
 	Cron string `json:"cron" yaml:"cron"`
 
-	Detection AddressDetectionSpec `json:"detection" yaml:"detection"`
+	// ProviderRef is the name of the DNS provider specification defined by user
+	ProviderRef string `json:"providerRef" yaml:"providerRef"`
 
-	Provider DNSProviderSpec `json:"provider" yaml:"provider"`
+	// DetectionRef is the name of the address detection specification defined by user
+	DetectionRef string `json:"detectionRef" yaml:"detectionRef"`
+
+	detectionSpec *AddressDetectionSpec
+
+	providerSpec *DNSProviderSpec
 }
 
 func (spec *DDNSSpec) Validate() error {
@@ -286,19 +296,124 @@ func (spec *DDNSSpec) Validate() error {
 		return fmt.Errorf("crontab cannot be empty")
 	}
 
-	return spec.Detection.Validate()
+	if spec.ProviderRef == "" {
+		return fmt.Errorf("providerref cannot be empty")
+	}
+
+	if spec.DetectionRef == "" {
+		return fmt.Errorf("detectionref cannot be empty")
+	}
+
+	return nil
+}
+
+func (spec *DDNSSpec) GetDetectionSpec() *AddressDetectionSpec {
+	return spec.detectionSpec
+}
+
+func (spec *DDNSSpec) GetProviderSpec() *DNSProviderSpec {
+	return spec.providerSpec
 }
 
 // Config is the configuration of this application
 type Config struct {
-	DDNS []*DDNSSpec `json:"ddns,omitempty" yaml:"ddns,omitempty"`
+	DDNS []*DDNSSpec `json:"ddns" yaml:"ddns"`
+
+	Detection []*AddressDetectionSpec `json:"detection" yaml:"detection"`
+
+	Provider []*DNSProviderSpec `json:"provider" yaml:"provider"`
 }
 
 func (c *Config) Validate() error {
-	for _, v := range c.DDNS {
-		if err := v.Validate(); err != nil {
-			return err
+	if len(c.DDNS) == 0 {
+		return fmt.Errorf("must have at least 1 ddns spec")
+	}
+
+	if len(c.Detection) == 0 {
+		return fmt.Errorf("must have at least 1 detection spec")
+	}
+
+	if len(c.Provider) == 0 {
+		return fmt.Errorf("must have at least 1 provider")
+	}
+
+	var validateWg sync.WaitGroup
+	validateWg.Add(3)
+
+	var ddnsErr error
+	ddns := make(map[string]*DDNSSpec)
+	go func(wg *sync.WaitGroup) {
+		for _, spec := range c.DDNS {
+			if _, exists := ddns[spec.Name]; exists {
+				ddnsErr = fmt.Errorf("ddns spec %s already exists", spec.Name)
+				break
+			}
+			if ddnsErr = spec.Validate(); ddnsErr != nil {
+				break
+			}
+			ddns[spec.Name] = spec
 		}
+		wg.Done()
+	}(&validateWg)
+
+	var detectionErr error
+	detects := make(map[string]*AddressDetectionSpec)
+	go func(wg *sync.WaitGroup) {
+		for _, spec := range c.Detection {
+			if _, exists := detects[spec.Name]; exists {
+				detectionErr = fmt.Errorf("detection spec %s already exists", spec.Name)
+				break
+			}
+			if detectionErr = spec.Validate(); detectionErr != nil {
+				break
+			}
+			detects[spec.Name] = spec
+		}
+		wg.Done()
+	}(&validateWg)
+
+	var providerErr error
+	providers := make(map[string]*DNSProviderSpec)
+	go func(wg *sync.WaitGroup) {
+		for _, spec := range c.Provider {
+			if _, exists := providers[spec.Name]; exists {
+				providerErr = fmt.Errorf("provider spec %s already exists", spec.Name)
+				break
+			}
+			if providerErr = spec.Validate(); providerErr != nil {
+				break
+			}
+			providers[spec.Name] = spec
+		}
+		wg.Done()
+	}(&validateWg)
+
+	validateWg.Wait()
+
+	if ddnsErr != nil {
+		return ddnsErr
+	}
+	if detectionErr != nil {
+		return detectionErr
+	}
+	if providerErr != nil {
+		return providerErr
+	}
+
+	for k := range ddns {
+		ddnsSpec := ddns[k]
+
+		detectionName := ddnsSpec.DetectionRef
+		if _, exists := detects[detectionName]; !exists {
+			return fmt.Errorf("ddns spec %s referenced unknown detection spec %s", ddnsSpec.Name, detectionName)
+		}
+		ddnsSpec.detectionSpec = detects[detectionName]
+
+		providerName := ddnsSpec.ProviderRef
+		if _, exists := providers[providerName]; !exists {
+			return fmt.Errorf("ddns spec %s referenced unknown provider spec %s", ddnsSpec.Name, providerName)
+		}
+		ddnsSpec.providerSpec = providers[providerName]
 	}
 	return nil
 }

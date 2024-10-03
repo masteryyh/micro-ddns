@@ -18,11 +18,11 @@ package ddns
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
+
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/internal/dns"
 	"github.com/masteryyh/micro-ddns/internal/ip"
-	"log/slog"
 )
 
 type DDNSInstance struct {
@@ -35,61 +35,63 @@ type DDNSInstance struct {
 
 func NewDDNSInstance(ddnsSpec *config.DDNSSpec, logger *slog.Logger) (*DDNSInstance, error) {
 	var handler dns.DNSUpdateHandler
-	switch ddnsSpec.Provider.Name {
+
+	providerSpec := ddnsSpec.GetProviderSpec()
+	providerType := providerSpec.GetType()
+	switch providerType {
 	case config.DNSProviderCloudflare:
-		spec := ddnsSpec.Provider.Cloudflare
+		spec := providerSpec.Cloudflare
 		h, err := dns.NewCloudflareDNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
 	case config.DNSProviderAliCloud:
-		spec := ddnsSpec.Provider.AliCloud
+		spec := providerSpec.AliCloud
 		h, err := dns.NewAliCloudDNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
 	case config.DNSProviderDNSPod:
-		spec := ddnsSpec.Provider.DNSPod
+		spec := providerSpec.DNSPod
 		h, err := dns.NewDNSPodDNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
 	case config.DNSProviderHuaweiCloud:
-		spec := ddnsSpec.Provider.Huawei
+		spec := providerSpec.Huawei
 		h, err := dns.NewHuaweiCloudDNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
 	case config.DNSProviderJDCloud:
-		spec := ddnsSpec.Provider.JD
+		spec := providerSpec.JD
 		h, err := dns.NewJDCloudDNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
 	case config.DNSProviderRFC2136:
-		spec := ddnsSpec.Provider.RFC2136
+		spec := providerSpec.RFC2136
 		h, err := dns.NewRFC2136DNSUpdateHandler(ddnsSpec, spec, logger)
 		if err != nil {
 			return nil, err
 		}
 		handler = h
-	default:
-		return nil, fmt.Errorf("unknown provider %s", ddnsSpec.Provider.Name)
 	}
 
 	var addrDetector ip.AddressDetector
-	switch ddnsSpec.Detection.Type {
+
+	detectionSpec := ddnsSpec.GetDetectionSpec()
+	detectionType := detectionSpec.GetDetectionType()
+	switch detectionType {
 	case config.AddressDetectionIface:
-		addrDetector = ip.NewIfaceAddressDetector(ddnsSpec.Detection, ddnsSpec.Stack, logger)
+		addrDetector = ip.NewIfaceAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
 	case config.AddressDetectionThirdParty:
-		addrDetector = ip.NewThirdPartyAddressDetector(ddnsSpec.Detection, ddnsSpec.Stack, logger)
-	default:
-		return nil, fmt.Errorf("unknown address detection method %s", ddnsSpec.Detection.Type)
+		addrDetector = ip.NewThirdPartyAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
 	}
 
 	return &DDNSInstance{

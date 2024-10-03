@@ -33,7 +33,7 @@ type IfaceAddressDetector struct {
 	logger             *slog.Logger
 }
 
-func NewIfaceAddressDetector(detectionSpec config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *IfaceAddressDetector {
+func NewIfaceAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *IfaceAddressDetector {
 	spec := detectionSpec.Interface
 	var policy config.LocalAddressPolicy
 	if detectionSpec.LocalAddressPolicy == nil {
