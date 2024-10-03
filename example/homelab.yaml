@@ -4,24 +4,25 @@ ddns:
     subdomain: test
     stack: IPv4
     cron: "*/30 * * * *"
-    detection:
-      type: ThirdParty
-      api:
-        url: https://api.ipify.org/
-    provider:
-      name: Cloudflare
-      cloudflare:
-        apiToken: "<redacted>"
+    providerRef: cloudflare
+    detectionRef: v4
   - name: homelab-v6
     domain: yourhomelab.com
     subdomain: test
     stack: IPv6
     cron: "*/30 * * * *"
-    detection:
-      type: ThirdParty
-      api:
-        url: https://api6.ipify.org/
-    provider:
-      name: Cloudflare
-      cloudflare:
-        apiToken: "<redacted>"
+    providerRef: cloudflare
+    detectionRef: v6
+
+detection:
+  - name: v4
+    api:
+      url: https://api.ipify.org/
+  - name: v6
+    api:
+      url: https://api6.ipify.org/
+
+provider:
+  - name: cloudflare
+    cloudflare:
+      apiToken: "<redacted>"
