@@ -35,10 +35,6 @@ type DDNSInstanceManager struct {
 }
 
 func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger, wg *sync.WaitGroup) (*DDNSInstanceManager, error) {
-	if len(specs) == 0 {
-		return nil, fmt.Errorf("no ddns specs provided")
-	}
-
 	instances := make(map[string]*DDNSInstance, len(specs))
 	for _, spec := range specs {
 		if _, ok := instances[spec.Name]; ok {

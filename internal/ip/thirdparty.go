@@ -46,7 +46,7 @@ type ThirdPartyAddressDetector struct {
 	logger *slog.Logger
 }
 
-func NewThirdPartyAddressDetector(detectionSpec config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *ThirdPartyAddressDetector {
+func NewThirdPartyAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *ThirdPartyAddressDetector {
 	spec := detectionSpec.API
 
 	var policy config.LocalAddressPolicy
