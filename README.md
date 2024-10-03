@@ -12,14 +12,18 @@ ddns:
     subdomain: test
     stack: IPv4
     cron: "*/30 * * * *"
-    detection:
-      type: ThirdParty
-      api:
-        url: https://api.ipify.org
-    provider:
-      name: Cloudflare
-      cloudflare:
-        apiToken: "<redacted>"
+    detectionRef: api
+    providerRef: cloudflare
+
+detection:
+  - name: api
+    api:
+      url: https://api.ipify.org/
+
+provider:
+  - name: cloudflare
+    cloudflare:
+      apiToken: "<redacted>"
 ```
 
 ```
