@@ -196,6 +196,7 @@ func (h *CloudflareDNSUpdateHandler) Update(parentCtx context.Context, newAddres
 	h.logger.Debug("updating DNS record for record ID " + h.recordId)
 	_, err := h.apiClient.UpdateDNSRecord(ctx, cloudflare.ZoneIdentifier(h.zoneId), cloudflare.UpdateDNSRecordParams{
 		Type:    string(h.recordType),
+		ID:      h.recordId,
 		Name:    h.subdomain,
 		Content: newAddress,
 		TTL:     CloudflareDefaultTTL,
