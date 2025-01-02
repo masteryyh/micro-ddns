@@ -3,19 +3,19 @@ module github.com/masteryyh/micro-ddns
 go 1.23
 
 require (
-	github.com/alibabacloud-go/alidns-20150109/v4 v4.5.5
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.9
+	github.com/alibabacloud-go/alidns-20150109/v4 v4.5.7
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10
 	github.com/alibabacloud-go/tea v1.2.2
 	github.com/bodgit/tsig v1.2.2
-	github.com/cloudflare/cloudflare-go v0.104.0
-	github.com/go-co-op/gocron/v2 v2.12.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.114
-	github.com/itchyny/gojq v0.12.16
+	github.com/cloudflare/cloudflare-go v0.113.0
+	github.com/go-co-op/gocron/v2 v2.14.0
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.129
+	github.com/itchyny/gojq v0.12.17
 	github.com/jdcloud-api/jdcloud-sdk-go v1.62.0
 	github.com/miekg/dns v1.1.62
 	github.com/spf13/cobra v1.8.1
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.1006
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.1006
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.1073
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.1073
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -27,10 +27,10 @@ require (
 	github.com/alibabacloud-go/openapi-util v0.1.1 // indirect
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
-	github.com/aliyun/credentials-go v1.3.10 // indirect
+	github.com/aliyun/credentials-go v1.4.3 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
-	github.com/goccy/go-json v0.10.3 // indirect
+	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -55,15 +55,15 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	go.mongodb.org/mongo-driver v1.17.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
-	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
-	golang.org/x/tools v0.25.0 // indirect
+	go.mongodb.org/mongo-driver v1.17.1 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/time v0.8.0 // indirect
+	golang.org/x/tools v0.28.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
