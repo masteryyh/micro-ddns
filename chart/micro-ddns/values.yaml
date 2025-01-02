@@ -19,7 +19,7 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# This creates a ConfigMap for micro-ddns that will mount to /app/config.yaml
+# This creates a ConfigMap for micro-ddns that will mount to /etc/micro-ddns/config.yaml
 ddnsConfig: |
   ddns:
     - name: homelab
@@ -27,14 +27,16 @@ ddnsConfig: |
       subdomain: test
       stack: IPv4
       cron: "*/30 * * * *"
-      detection:
-        type: ThirdParty
-        api:
-          url: https://api.ipify.org
-      provider:
-        name: Cloudflare
-        cloudflare:
-          apiToken: "<redacted>"
+      detectionRef: api
+      providerRef: cloudflare
+  detection:
+    - name: api
+      api:
+        url: https://api.ipify.org/
+  provider:
+    - name: cloudflare
+      cloudflare:
+        apiToken: "<redacted>"
 
 #This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
