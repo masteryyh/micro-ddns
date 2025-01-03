@@ -1,5 +1,7 @@
 FROM ubuntu:oracular
 
+ARG TARGETARCH
+
 LABEL author=masteryyh
 LABEL email="yyh991013@163.com"
 
@@ -8,7 +10,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
-COPY bin/micro-ddns-$TARGETARCH /usr/local/bin/micro-ddns
+COPY bin/micro-ddns-${TARGETARCH} /usr/local/bin/micro-ddns
 
 USER 1000:1000
 
