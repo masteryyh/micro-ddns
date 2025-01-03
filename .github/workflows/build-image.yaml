@@ -60,6 +60,7 @@ jobs:
           push: true
           context: .
           platforms: linux/${{ matrix.platform }}
+          file: Dockerfile.alpine
           tags: masteryyh/micro-ddns:experimental-alpine3.21
 
       - name: Build and push Ubuntu image
@@ -78,4 +79,5 @@ jobs:
           push: true
           context: .
           platforms: linux/${{ matrix.platform }}
+          file: Dockerfile.alpine
           tags: masteryyh/micro-ddns:alpine3.21,masteryyh/micro-ddns:${{ github.ref_name }}-alpine3.21
