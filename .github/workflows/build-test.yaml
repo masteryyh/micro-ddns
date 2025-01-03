@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build repository
+    name: Test build repository
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
