@@ -49,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          context: .
           platforms: linux/${{ matrix.platform }}
           tags: masteryyh/micro-ddns:experimental,masteryyh/micro-ddns:experimental-oracular
 
@@ -57,6 +58,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          context: .
           platforms: linux/${{ matrix.platform }}
           tags: masteryyh/micro-ddns:experimental-alpine3.21
 
@@ -65,6 +67,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          context: .
           platforms: linux/${{ matrix.platform }}
           tags: masteryyh/micro-ddns:oracular,masteryyh/micro-ddns:${{ github.ref_name }}-oracular,masteryyh/micro-ddns:latest
 
@@ -73,5 +76,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          context: .
           platforms: linux/${{ matrix.platform }}
           tags: masteryyh/micro-ddns:alpine3.21,masteryyh/micro-ddns:${{ github.ref_name }}-alpine3.21
