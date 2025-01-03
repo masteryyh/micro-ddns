@@ -27,7 +27,7 @@ compile() {
     local ldflags=$2
 
     echo "Compiling for arch $goarch..."
-    GOOS=linux GOARCH=$goarch go build -ldflags="${ldflags}" -o "bin/micro-ddns" cmd/main.go
+    GOOS=linux GOARCH=$goarch go build -ldflags="${ldflags}" -o "bin/micro-ddns-${goarch}" cmd/main.go
 }
 
 if [ -z "${VERSION}" ]; then
@@ -42,13 +42,10 @@ if [ -z "${GO_VERSION}" ]; then
     GO_VERSION="$(go version | awk '{print $3}')"
 fi
 
-if [ -z "${ARCH}" ]; then
-	ARCH="amd64"
-fi
-
 LDFLAGS="-X 'github.com/masteryyh/micro-ddns/internal/version.Version=${VERSION}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.BuildTime=${BUILD_TIME}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.GoVersion=${GO_VERSION}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.CommitHash=$(get_commit_hash)'"
 
-compile "$ARCH" "$LDFLAGS"
+compile "amd64" "$LDFLAGS"
+compile "arm64" "$LDFLAGS"
