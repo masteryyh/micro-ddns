@@ -4,11 +4,11 @@ LABEL author=masteryyh
 LABEL email="yyh991013@163.com"
 
 RUN apt-get update && \
-    apt-get install ca-certificates curl -y \
-    rm -rf /var/lib/apt/lists/* \
+    apt-get install ca-certificates curl -y && \
+    rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
-COPY bin/micro-ddns /usr/local/bin
+COPY ./bin/micro-ddns /usr/local/bin
 
 USER 1000:1000
 
