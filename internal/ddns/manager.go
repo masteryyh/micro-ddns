@@ -68,7 +68,6 @@ func (m *DDNSInstanceManager) Start(parentCtx context.Context) {
 				m.logger.Error("failed to handle DNS update", "name", instance.spec.Name, "err", err)
 				return
 			}
-			m.logger.Info("successfully updated DNS record", "name", instance.spec.Name)
 		}, parentCtx, instance))
 		if err != nil {
 			m.logger.Error("failed to create job", "name", name, "err", err)

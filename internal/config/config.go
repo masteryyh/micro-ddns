@@ -24,7 +24,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/masteryyh/micro-ddns/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,21 +41,6 @@ const (
 	IPv6 NetworkStack = "IPv6"
 )
 
-type AddressDetectionType string
-
-const (
-	AddressDetectionIface      AddressDetectionType = "Interface"
-	AddressDetectionThirdParty AddressDetectionType = "ThirdParty"
-)
-
-type LocalAddressPolicy string
-
-const (
-	LocalAddressPolicyIgnore LocalAddressPolicy = "Ignore"
-	LocalAddressPolicyAllow  LocalAddressPolicy = "Allow"
-	LocalAddressPolicyPrefer LocalAddressPolicy = "Prefer"
-)
-
 type DNSProvider string
 
 const (
@@ -67,172 +51,6 @@ const (
 	DNSProviderJDCloud     DNSProvider = "JDCloud"
 	DNSProviderRFC2136     DNSProvider = "RFC2136"
 )
-
-// DNSProviderSpec is the specification of DNS provider, currently only Cloudflare
-// is supported
-type DNSProviderSpec struct {
-	// Name of the provider specification
-	Name string `json:"name" yaml:"name"`
-
-	providerType DNSProvider
-
-	Cloudflare *CloudflareSpec `json:"cloudflare,omitempty" yaml:"cloudflare,omitempty"`
-
-	AliCloud *AliCloudSpec `json:"alicloud,omitempty" yaml:"alicloud,omitempty"`
-
-	DNSPod *DNSPodSpec `json:"dnspod,omitempty" yaml:"dnspod,omitempty"`
-
-	Huawei *HuaweiCloudSpec `json:"huawei,omitempty" yaml:"huawei,omitempty"`
-
-	JD *JDCloudSpec `json:"jd,omitempty" yaml:"jd,omitempty"`
-
-	RFC2136 *RFC2136Spec `json:"rfc2136,omitempty" yaml:"rfc2136,omitempty"`
-}
-
-func (spec *DNSProviderSpec) Validate() error {
-	count := 0
-	if spec.Cloudflare != nil {
-		count++
-	}
-	if spec.AliCloud != nil {
-		count++
-	}
-	if spec.DNSPod != nil {
-		count++
-	}
-	if spec.Huawei != nil {
-		count++
-	}
-	if spec.JD != nil {
-		count++
-	}
-	if spec.RFC2136 != nil {
-		count++
-	}
-
-	if count == 0 {
-		return fmt.Errorf("no provider specified")
-	}
-
-	if count > 1 {
-		return fmt.Errorf("only 1 provider can be used within 1 spec")
-	}
-
-	if spec.Cloudflare != nil {
-		spec.providerType = DNSProviderCloudflare
-		return spec.Cloudflare.Validate()
-	} else if spec.AliCloud != nil {
-		spec.providerType = DNSProviderAliCloud
-		return spec.AliCloud.Validate()
-	} else if spec.DNSPod != nil {
-		spec.providerType = DNSProviderDNSPod
-		return spec.DNSPod.Validate()
-	} else if spec.Huawei != nil {
-		spec.providerType = DNSProviderHuaweiCloud
-		return spec.Huawei.Validate()
-	} else if spec.JD != nil {
-		spec.providerType = DNSProviderJDCloud
-		return spec.JD.Validate()
-	} else if spec.RFC2136 != nil {
-		spec.providerType = DNSProviderRFC2136
-		return spec.RFC2136.Validate()
-	}
-
-	return nil
-}
-
-func (spec *DNSProviderSpec) GetType() DNSProvider {
-	return spec.providerType
-}
-
-// NetworkInterfaceDetectionSpec defines how should we get IP address from an interface
-// By default the first address detected will be used
-type NetworkInterfaceDetectionSpec struct {
-	// Name is the name of interface
-	Name string `json:"name" yaml:"name"`
-}
-
-func (spec *NetworkInterfaceDetectionSpec) Validate() error {
-	if spec.Name == "" {
-		return fmt.Errorf("interface name cannot be empty")
-	}
-	return nil
-}
-
-// ThirdPartyServiceSpec defines how should we access third party API to get our IP address
-type ThirdPartyServiceSpec struct {
-	// URL is the URL of third-party API
-	URL string `json:"url" yaml:"url"`
-
-	// JsonPath is the path to the address if data returned by API is JSON-formatted
-	JsonPath *string `json:"jsonPath,omitempty" yaml:"jsonPath,omitempty"`
-
-	// Params will be added to the URL
-	Params *map[string]string `json:"params,omitempty" yaml:"params,omitempty"`
-
-	// Headers will be added to the request header if not empty
-	Headers *map[string]string `json:"customHeaders,omitempty" yaml:"customHeaders,omitempty"`
-
-	// Username is the username for HTTP basic authentication if required
-	Username *string `json:"username,omitempty" yaml:"username,omitempty"`
-
-	// Password is the password for HTTP basic authentication if required
-	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
-}
-
-func (spec *ThirdPartyServiceSpec) Validate() error {
-	if spec.URL == "" {
-		return fmt.Errorf("url cannot be empty")
-	}
-
-	if spec.JsonPath != nil && *spec.JsonPath == "" {
-		spec.JsonPath = nil
-	}
-
-	return nil
-}
-
-// AddressDetectionSpec defines how should we detect current IP address
-type AddressDetectionSpec struct {
-	// Name of this address detection specification
-	Name string `json:"name" yaml:"name"`
-
-	detectionType AddressDetectionType
-
-	// LocalAddressPolicy defines how should we process addresses
-	// LocalAddressPolicyIgnore means the operation would fail when no public address presents on the interface
-	// LocalAddressPolicyAllow means local addresses will be used for DNS record, but only if no public address presents on the interface
-	// LocalAddressPolicyPrefer means local addresses will be used for DNS record even public address presents on the interface
-	LocalAddressPolicy *LocalAddressPolicy `json:"localAddressPolicy,omitempty" yaml:"localAddressPolicy,omitempty"`
-
-	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
-
-	API *ThirdPartyServiceSpec `json:"api,omitempty" yaml:"api,omitempty"`
-}
-
-func (spec *AddressDetectionSpec) Validate() error {
-	if spec.LocalAddressPolicy == nil {
-		spec.LocalAddressPolicy = (*LocalAddressPolicy)(utils.StringPtr("Ignore"))
-	}
-
-	p := *spec.LocalAddressPolicy
-	if p != "Ignore" && p != "Prefer" && p != "Allow" {
-		return fmt.Errorf("unknown localAddressPolicy %s", p)
-	}
-
-	if spec.Interface != nil {
-		spec.detectionType = AddressDetectionIface
-		return spec.Interface.Validate()
-	} else if spec.API != nil {
-		spec.detectionType = AddressDetectionThirdParty
-		return spec.API.Validate()
-	}
-	return fmt.Errorf("must specify a detection method")
-}
-
-func (spec *AddressDetectionSpec) GetDetectionType() AddressDetectionType {
-	return spec.detectionType
-}
 
 // DDNSSpec is the specification of DDNS service
 type DDNSSpec struct {

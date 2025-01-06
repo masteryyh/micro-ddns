@@ -64,23 +64,26 @@ provider:
 
 ### Address detection fields
 
-| Name                                     | Type    | Description                                                                                                                                                                 |
-|------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `detection.name`                     | string  | Address detection specification name, must be unique.                                                                 |
-| `detection.interface`         | object | Interface address detection specifications.                                                                                              |
-| `detection.interface.name`    | string | Interface to read address from.                                                                                                          |
-| `detection.api`               | object | Third-party API detection specification.                                                                                                 |
-| `detection.api.url`           | string | 3rd-party API URL.                                                                                                                       |
-| `detection.api.customHeaders` | object | (Optional) Custom headers that adds into requests to 3rd-party API.                                                                      |
-| `detection.api.params`        | object | (Optional) Custom params that appends to API URL.                                                                                        |
-| `detection.api.username`      | string | (Optional) API authentication username.                                                                                                  |
-| `detection.api.password`      | string | (Optional) API authentication password.                                                                                                  |
+| Name                              | Type   | Description                                                                   |
+|-----------------------------------|--------|-------------------------------------------------------------------------------|
+| `detection.name`                  | string | Address detection specification name, must be unique.                         |
+| `detection.interface`             | object | Interface address detection specifications.                                   |
+| `detection.interface.name`        | string | Interface to read address from.                                               |
+| `detection.api`                   | object | Third-party API detection specification.                                      |
+| `detection.api.url`               | string | 3rd-party API URL.                                                            |
+| `detection.api.customHeaders`     | object | (Optional) Custom headers that adds into requests to 3rd-party API.           |
+| `detection.api.params`            | object | (Optional) Custom params that appends to API URL.                             |
+| `detection.api.username`          | string | (Optional) API authentication username.                                       |
+| `detection.api.password`          | string | (Optional) API authentication password.                                       |
+| `detection.selector`              | object | (Optional) Address selector policy, by indicating included and excluded CIDRs |
+| `detection.selector.includeCIDRs` | array  | (Optional) CIDRs that should be included                                      |
+| `detection.selector.excludeCIDRs` | array  | (Optional) CIDRs that should be excluded                                      |
 
 ### DNS provider fields
 
-| Name                                     | Type    | Description                                                                                                                                                                 |
-|------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `provider.name`                     | string  | DNS provider specification name, must be unique.                                                                 |
+| Name                                | Type    | Description                                                                                                                                                                 |
+|-------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `provider.name`                     | string  | DNS provider specification name, must be unique.                                                                                                                            |
 | `provider.cloudflare`               | object  | Credentials and settings for Cloudflare DNS provider.                                                                                                                       |
 | `provider.cloudflare.apiToken`      | string  | Fine-grained API token for Cloudflare, recommended as this can limit permissions for a specific token. Conflict with `globalApiKey` and `email`.                            |
 | `provider.cloudflare.globalApiKey`  | string  | Global API key for Cloudflare, not recommended as this key has full permission to access your Cloudflare account and resources. Use with `email`. Conflict with `apiToken`. |

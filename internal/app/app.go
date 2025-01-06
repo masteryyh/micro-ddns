@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/masteryyh/micro-ddns/pkg/signal"
 	"log/slog"
 	"os"
 	"sync"
@@ -26,7 +27,6 @@ import (
 	"github.com/masteryyh/micro-ddns/internal/config"
 	"github.com/masteryyh/micro-ddns/internal/ddns"
 	"github.com/masteryyh/micro-ddns/internal/metrics"
-	"github.com/masteryyh/micro-ddns/internal/signal"
 )
 
 type App struct {

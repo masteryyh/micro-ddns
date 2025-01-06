@@ -109,6 +109,9 @@ func (n *DDNSInstance) DoUpdate(parentCtx context.Context) error {
 		n.logger.Error("error detecting address", "name", n.spec.Name, "err", err)
 		return err
 	}
+	if addr != "" {
+		n.logger.Info("current address detected", "address", addr)
+	}
 
 	n.logger.Info("getting current address registered with DNS provider", "name", n.spec.Name)
 	recordAddr, err := n.dnsHandler.Get(parentCtx)

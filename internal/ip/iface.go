@@ -18,7 +18,6 @@ package ip
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"strings"
@@ -27,25 +26,23 @@ import (
 )
 
 type IfaceAddressDetector struct {
-	interfaceName      string
-	localAddressPolicy config.LocalAddressPolicy
-	stack              config.NetworkStack
-	logger             *slog.Logger
+	interfaceName string
+	stack         config.NetworkStack
+	includes      []*net.IPNet
+	excludes      []*net.IPNet
+	logger        *slog.Logger
 }
 
 func NewIfaceAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *IfaceAddressDetector {
 	spec := detectionSpec.Interface
-	var policy config.LocalAddressPolicy
-	if detectionSpec.LocalAddressPolicy == nil {
-		policy = config.LocalAddressPolicyIgnore
-	}
 
 	logger.Debug("watching network interface", "interface", spec.Name)
 	return &IfaceAddressDetector{
-		interfaceName:      spec.Name,
-		localAddressPolicy: policy,
-		stack:              stack,
-		logger:             logger,
+		interfaceName: spec.Name,
+		stack:         stack,
+		includes:      detectionSpec.Selector.GetIncludes(),
+		excludes:      detectionSpec.Selector.GetExcludes(),
+		logger:        logger,
 	}
 }
 
@@ -68,66 +65,29 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 		return "", err
 	}
 
-	var privateIPs, publicIPs []string
+	var validAddresses []net.IP
 	for _, addr := range addrs {
 		address := strings.Split(addr.String(), "/")[0]
+		var ip net.IP
 		if v4 {
-			if !IsValidV4(address) {
-				d.logger.Debug("ignoring invalid address", "address", address)
-				continue
-			}
-
-			if IsPrivate(address) {
-				d.logger.Debug("saving private IPv4 address", "address", address)
-				privateIPs = append(privateIPs, address)
-				continue
-			}
-			d.logger.Debug("saving public IPv4 address", "address", address)
-			publicIPs = append(publicIPs, address)
+			ip = IsValidV4(address)
 		} else {
-			if !IsValidV6(address) {
-				d.logger.Debug("ignoring invalid address", "address", address)
-				continue
-			}
-
-			if IsPrivate(address) {
-				d.logger.Debug("saving private IPv6 address", "address", address)
-				privateIPs = append(privateIPs, address)
-				continue
-			}
-			d.logger.Debug("saving public IPv6 address", "address", address)
-			publicIPs = append(publicIPs, address)
+			ip = IsValidV6(address)
 		}
+		if ip == nil {
+			d.logger.Debug("ignoring invalid address", "address", address)
+			continue
+		}
+		validAddresses = append(validAddresses, ip)
 	}
 
-	var validAddr string
-	switch d.localAddressPolicy {
-	case config.LocalAddressPolicyAllow:
-		if len(publicIPs) == 0 {
-			if len(privateIPs) == 0 {
-				return "", fmt.Errorf("no valid address found")
-			}
-			validAddr = privateIPs[0]
+	var selected []string
+	for _, valid := range validAddresses {
+		if AddressExcluded(valid, d.includes, d.excludes) {
+			selected = append(selected, valid.String())
 		}
-		validAddr = publicIPs[0]
-	case config.LocalAddressPolicyPrefer:
-		if len(privateIPs) == 0 {
-			if len(publicIPs) == 0 {
-				return "", fmt.Errorf("no valid address found")
-			}
-			validAddr = publicIPs[0]
-		}
-		validAddr = privateIPs[0]
-	default:
-	case config.LocalAddressPolicyIgnore:
-		if len(publicIPs) == 0 {
-			return "", fmt.Errorf("no valid public address found")
-		}
-		validAddr = publicIPs[0]
 	}
-
-	d.logger.Debug("address selected", "address", validAddr)
-	return validAddr, nil
+	return selected[0], nil
 }
 
 func (d *IfaceAddressDetector) Detect(_ context.Context) (string, error) {

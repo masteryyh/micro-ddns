@@ -21,37 +21,81 @@ import (
 	"strings"
 )
 
-func validateAddress(address string) bool {
+func validateAddress(address string) net.IP {
 	ip := net.ParseIP(address)
 	if ip == nil {
-		return false
+		return nil
 	}
 
-	return !ip.IsLoopback() &&
+	if !ip.IsLoopback() &&
 		!ip.IsMulticast() &&
 		!ip.IsUnspecified() &&
 		!ip.IsInterfaceLocalMulticast() &&
-		!ip.IsLinkLocalUnicast()
-}
-
-func IsPrivate(address string) bool {
-	ip := net.ParseIP(address)
-	if ip == nil {
-		return false
+		!ip.IsLinkLocalUnicast() {
+		return ip
 	}
-	return ip.IsPrivate()
+	return nil
 }
 
-func IsValidV4(address string) bool {
+func IsValidV4(address string) net.IP {
 	if strings.Contains(address, ":") {
-		return false
+		return nil
 	}
 	return validateAddress(address)
 }
 
-func IsValidV6(address string) bool {
+func IsValidV6(address string) net.IP {
 	if strings.Count(address, ":") < 2 {
-		return false
+		return nil
 	}
 	return validateAddress(address)
+}
+
+func AddressExcluded(address net.IP, includes []*net.IPNet, excludes []*net.IPNet) bool {
+	if len(includes) == 0 && len(excludes) == 0 {
+		return true
+	}
+
+	if len(includes) == 0 {
+		for _, exclude := range excludes {
+			if exclude.Contains(address) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if len(excludes) == 0 {
+		for _, include := range includes {
+			if include.Contains(address) {
+				return false
+			}
+		}
+		return true
+	}
+
+	var includeCidr *net.IPNet
+	for _, include := range includes {
+		if include.Contains(address) {
+			includeCidr = include
+			break
+		}
+	}
+
+	if includeCidr == nil {
+		return false
+	}
+
+	var excludeCidr *net.IPNet
+	for _, exclude := range excludes {
+		if exclude.Contains(address) {
+			excludeCidr = exclude
+			break
+		}
+	}
+	if excludeCidr == nil {
+		return true
+	}
+
+	return includeCidr.Contains(excludeCidr.IP)
 }
