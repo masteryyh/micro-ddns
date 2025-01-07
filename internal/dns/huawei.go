@@ -100,7 +100,7 @@ func (h *HuaweiCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, er
 					return *zone.Id, nil
 				}
 			}
-			return "", fmt.Errorf("zone " + h.domain + " not exists")
+			return "", fmt.Errorf("zone %s not exists", h.domain)
 		})
 		if err != nil {
 			return "", err
