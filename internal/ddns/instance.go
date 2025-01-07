@@ -21,15 +21,15 @@ import (
 	"log/slog"
 
 	"github.com/masteryyh/micro-ddns/internal/config"
+	"github.com/masteryyh/micro-ddns/internal/detection"
 	"github.com/masteryyh/micro-ddns/internal/dns"
-	"github.com/masteryyh/micro-ddns/internal/ip"
 )
 
 type DDNSInstance struct {
 	spec *config.DDNSSpec
 
 	dnsHandler      dns.DNSUpdateHandler
-	addressDetector ip.AddressDetector
+	addressDetector detection.AddressDetector
 	logger          *slog.Logger
 }
 
@@ -83,15 +83,21 @@ func NewDDNSInstance(ddnsSpec *config.DDNSSpec, logger *slog.Logger) (*DDNSInsta
 		handler = h
 	}
 
-	var addrDetector ip.AddressDetector
+	var addrDetector detection.AddressDetector
 
 	detectionSpec := ddnsSpec.GetDetectionSpec()
 	detectionType := detectionSpec.GetDetectionType()
 	switch detectionType {
 	case config.AddressDetectionIface:
-		addrDetector = ip.NewIfaceAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
+		addrDetector = detection.NewIfaceAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
 	case config.AddressDetectionThirdParty:
-		addrDetector = ip.NewThirdPartyAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
+		addrDetector = detection.NewThirdPartyAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
+	case config.AddressDetectionSSH:
+		detector, err := detection.NewSSHAddressDetector(detectionSpec, ddnsSpec.Stack, logger)
+		if err != nil {
+			return nil, err
+		}
+		addrDetector = detector
 	}
 
 	return &DDNSInstance{
@@ -108,6 +114,9 @@ func (n *DDNSInstance) DoUpdate(parentCtx context.Context) error {
 	if err != nil {
 		n.logger.Error("error detecting address", "name", n.spec.Name, "err", err)
 		return err
+	}
+	if addr != "" {
+		n.logger.Info("current address detected", "address", addr)
 	}
 
 	n.logger.Info("getting current address registered with DNS provider", "name", n.spec.Name)

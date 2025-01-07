@@ -18,6 +18,83 @@ package config
 
 import "fmt"
 
+// DNSProviderSpec is the specification of DNS provider, currently only Cloudflare
+// is supported
+type DNSProviderSpec struct {
+	// Name of the provider specification
+	Name string `json:"name" yaml:"name"`
+
+	providerType DNSProvider
+
+	Cloudflare *CloudflareSpec `json:"cloudflare,omitempty" yaml:"cloudflare,omitempty"`
+
+	AliCloud *AliCloudSpec `json:"alicloud,omitempty" yaml:"alicloud,omitempty"`
+
+	DNSPod *DNSPodSpec `json:"dnspod,omitempty" yaml:"dnspod,omitempty"`
+
+	Huawei *HuaweiCloudSpec `json:"huawei,omitempty" yaml:"huawei,omitempty"`
+
+	JD *JDCloudSpec `json:"jd,omitempty" yaml:"jd,omitempty"`
+
+	RFC2136 *RFC2136Spec `json:"rfc2136,omitempty" yaml:"rfc2136,omitempty"`
+}
+
+func (spec *DNSProviderSpec) Validate() error {
+	count := 0
+	if spec.Cloudflare != nil {
+		count++
+	}
+	if spec.AliCloud != nil {
+		count++
+	}
+	if spec.DNSPod != nil {
+		count++
+	}
+	if spec.Huawei != nil {
+		count++
+	}
+	if spec.JD != nil {
+		count++
+	}
+	if spec.RFC2136 != nil {
+		count++
+	}
+
+	if count == 0 {
+		return fmt.Errorf("no provider specified")
+	}
+
+	if count > 1 {
+		return fmt.Errorf("only 1 provider can be used within 1 spec")
+	}
+
+	if spec.Cloudflare != nil {
+		spec.providerType = DNSProviderCloudflare
+		return spec.Cloudflare.Validate()
+	} else if spec.AliCloud != nil {
+		spec.providerType = DNSProviderAliCloud
+		return spec.AliCloud.Validate()
+	} else if spec.DNSPod != nil {
+		spec.providerType = DNSProviderDNSPod
+		return spec.DNSPod.Validate()
+	} else if spec.Huawei != nil {
+		spec.providerType = DNSProviderHuaweiCloud
+		return spec.Huawei.Validate()
+	} else if spec.JD != nil {
+		spec.providerType = DNSProviderJDCloud
+		return spec.JD.Validate()
+	} else if spec.RFC2136 != nil {
+		spec.providerType = DNSProviderRFC2136
+		return spec.RFC2136.Validate()
+	}
+
+	return nil
+}
+
+func (spec *DNSProviderSpec) GetType() DNSProvider {
+	return spec.providerType
+}
+
 // AliCloudSpec is the information of AliCloud API credential and extra settings
 type AliCloudSpec struct {
 	// AccessKeyID is the AccessKey of the account

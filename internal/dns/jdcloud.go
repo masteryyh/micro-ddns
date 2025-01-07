@@ -18,6 +18,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -86,7 +87,7 @@ func (h *JDCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, error)
 				return -1, err
 			}
 			if result.Error.Code != 0 {
-				return -1, fmt.Errorf(result.Error.Message)
+				return -1, errors.New(result.Error.Message)
 			}
 
 			for _, domain := range result.Result.DataList {
@@ -94,7 +95,7 @@ func (h *JDCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, error)
 					return domain.Id, nil
 				}
 			}
-			return -1, fmt.Errorf("domain " + h.domain + " not exists")
+			return -1, fmt.Errorf("domain %s not exists", h.domain)
 		})
 		if err != nil {
 			return "", err
@@ -118,7 +119,7 @@ func (h *JDCloudDNSUpdateHandler) Get(parentCtx context.Context) (string, error)
 			return -1, "", err
 		}
 		if result.Error.Code != 0 {
-			return -1, "", fmt.Errorf(result.Error.Message)
+			return -1, "", errors.New(result.Error.Message)
 		}
 
 		for _, record := range result.Result.DataList {
@@ -164,7 +165,7 @@ func (h *JDCloudDNSUpdateHandler) Create(parentCtx context.Context, address stri
 			return -1, err
 		}
 		if result.Error.Code != 0 {
-			return -1, fmt.Errorf(result.Error.Message)
+			return -1, errors.New(result.Error.Message)
 		}
 		return result.Result.DataList.Id, nil
 	})
@@ -206,7 +207,7 @@ func (h *JDCloudDNSUpdateHandler) Update(parentCtx context.Context, newAddress s
 			return err
 		}
 		if result.Error.Code != 0 {
-			return fmt.Errorf(result.Error.Message)
+			return errors.New(result.Error.Message)
 		}
 		return nil
 	})

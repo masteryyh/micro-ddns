@@ -99,7 +99,7 @@ func (h *DNSPodDNSUpdateHandler) findDomainId(parentCtx context.Context) error {
 	}
 
 	if h.domainId == nil {
-		return fmt.Errorf("domain " + h.domain + " not exists in the account")
+		return fmt.Errorf("domain %s not exists in the account", h.domain)
 	}
 	return nil
 }

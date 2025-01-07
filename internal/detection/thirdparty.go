@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ip
+package detection
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,14 +35,15 @@ import (
 )
 
 type ThirdPartyAddressDetector struct {
-	url                string
-	jsonPath           string
-	params             map[string]string
-	headers            map[string]string
-	username           string
-	password           string
-	localAddressPolicy config.LocalAddressPolicy
-	stack              config.NetworkStack
+	url      string
+	jsonPath string
+	params   map[string]string
+	headers  map[string]string
+	username string
+	password string
+	stack    config.NetworkStack
+	includes []*net.IPNet
+	excludes []*net.IPNet
 
 	logger *slog.Logger
 }
@@ -49,22 +51,17 @@ type ThirdPartyAddressDetector struct {
 func NewThirdPartyAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *ThirdPartyAddressDetector {
 	spec := detectionSpec.API
 
-	var policy config.LocalAddressPolicy
-	if detectionSpec.LocalAddressPolicy == nil {
-		policy = config.LocalAddressPolicyIgnore
-	} else {
-		policy = *detectionSpec.LocalAddressPolicy
-	}
 	return &ThirdPartyAddressDetector{
-		url:                spec.URL,
-		jsonPath:           utils.StringPtrToString(spec.JsonPath),
-		params:             utils.MapPtrToMap(spec.Params),
-		headers:            utils.MapPtrToMap(spec.Headers),
-		username:           utils.StringPtrToString(spec.Username),
-		password:           utils.StringPtrToString(spec.Password),
-		localAddressPolicy: policy,
-		stack:              stack,
-		logger:             logger,
+		url:      spec.URL,
+		jsonPath: utils.StringPtrToString(spec.JsonPath),
+		params:   utils.MapPtrToMap(spec.Params),
+		headers:  utils.MapPtrToMap(spec.Headers),
+		username: utils.StringPtrToString(spec.Username),
+		password: utils.StringPtrToString(spec.Password),
+		stack:    stack,
+		includes: detectionSpec.Selector.GetIncludes(),
+		excludes: detectionSpec.Selector.GetExcludes(),
+		logger:   logger,
 	}
 }
 
@@ -75,7 +72,7 @@ func (d *ThirdPartyAddressDetector) requestAddress(parentCtx context.Context) (s
 		params.Set(k, v)
 	}
 
-	ctx, cancel := context.WithTimeout(parentCtx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.url, nil)
 	if err != nil {
@@ -162,14 +159,13 @@ func (d *ThirdPartyAddressDetector) detectV4(parentCtx context.Context) (string,
 		return "", err
 	}
 
-	if !IsValidV4(val) {
+	ip := IsValidV4(val)
+	if ip == nil {
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if IsPrivate(val) {
-		if d.localAddressPolicy == config.LocalAddressPolicyIgnore {
-			return "", fmt.Errorf("local address is ignored: %s", val)
-		}
+	if !AddressExcluded(ip, d.includes, d.excludes) {
+		return "", fmt.Errorf("excluded address: %s", val)
 	}
 
 	return val, nil
@@ -181,14 +177,13 @@ func (d *ThirdPartyAddressDetector) detectV6(parentCtx context.Context) (string,
 		return "", err
 	}
 
-	if !IsValidV6(val) {
+	ip := IsValidV6(val)
+	if ip == nil {
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if IsPrivate(val) {
-		if d.localAddressPolicy == config.LocalAddressPolicyIgnore {
-			return "", fmt.Errorf("ULA address is ignored: %s", val)
-		}
+	if !AddressExcluded(ip, d.includes, d.excludes) {
+		return "", fmt.Errorf("excluded address: %s", val)
 	}
 
 	return val, nil

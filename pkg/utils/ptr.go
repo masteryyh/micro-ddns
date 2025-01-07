@@ -64,6 +64,12 @@ func StringPtr(v string) *string {
 	return ptr
 }
 
+func Uint16Ptr(v uint16) *uint16 {
+	ptr := new(uint16)
+	*ptr = v
+	return ptr
+}
+
 func Uint64Ptr(v uint64) *uint64 {
 	ptr := new(uint64)
 	*ptr = v
