@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ip
+package detection
 
 import (
 	"net"
@@ -41,6 +41,9 @@ func IsValidV4(address string) net.IP {
 	if strings.Contains(address, ":") {
 		return nil
 	}
+	if strings.Count(address, ".") < 3 {
+		return nil
+	}
 	return validateAddress(address)
 }
 
@@ -53,7 +56,7 @@ func IsValidV6(address string) net.IP {
 
 func AddressExcluded(address net.IP, includes []*net.IPNet, excludes []*net.IPNet) bool {
 	if len(includes) == 0 && len(excludes) == 0 {
-		return true
+		return false
 	}
 
 	if len(includes) == 0 {

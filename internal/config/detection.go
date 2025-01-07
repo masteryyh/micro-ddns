@@ -19,6 +19,8 @@ package config
 import (
 	"fmt"
 	"net"
+
+	"github.com/masteryyh/micro-ddns/pkg/utils"
 )
 
 type AddressDetectionType string
@@ -26,6 +28,7 @@ type AddressDetectionType string
 const (
 	AddressDetectionIface      AddressDetectionType = "Interface"
 	AddressDetectionThirdParty AddressDetectionType = "ThirdParty"
+	AddressDetectionSSH        AddressDetectionType = "SSH"
 )
 
 // NetworkInterfaceDetectionSpec defines how should we get IP address from an interface
@@ -75,6 +78,100 @@ func (spec *ThirdPartyServiceSpec) Validate() error {
 	return nil
 }
 
+// SSHHostSpec is the specification of remote SSH host
+type SSHHostSpec struct {
+	// Address of remote host
+	Address string `json:"address" yaml:"address"`
+
+	// Port of remote host, default is 22
+	Port *uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+}
+
+func (spec *SSHHostSpec) Validate() error {
+	if spec.Address == "" {
+		return fmt.Errorf("address cannot be empty")
+	}
+
+	if spec.Port == nil {
+		spec.Port = utils.Uint16Ptr(22)
+	}
+
+	if *spec.Port == 0 {
+		return fmt.Errorf("port cannot be 0")
+	}
+
+	return nil
+}
+
+// SSHCredentialSpec is the credential used to connect to remote SSH host
+type SSHCredentialSpec struct {
+	// User that connect to the host
+	User string `json:"user" yaml:"user"`
+
+	// Password of remote host, unsafe since it's trasmitted in plaintext
+	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
+
+	// PrivateKey for SSH authentication, recommended
+	PrivateKey *string `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+
+	// Passphrase for private key if it's encrypted
+	Passphrase *string `json:"passphrase,omitempty" yaml:"passphrase,omitempty"`
+}
+
+func (spec *SSHCredentialSpec) Validate() error {
+	if spec.User == "" {
+		return fmt.Errorf("user cannot be empty")
+	}
+
+	if utils.IsEmpty(spec.Password) && utils.IsEmpty(spec.PrivateKey) {
+		return fmt.Errorf("password or private key must be specified")
+	}
+
+	if !utils.IsEmpty(spec.Password) && !utils.IsEmpty(spec.PrivateKey) {
+		return fmt.Errorf("only one of password and private key can be specified")
+	}
+
+	return nil
+}
+
+// SSHDetectionSpec defines how should we connect to remote machine and fetch IP address using SSH
+type SSHDetectionSpec struct {
+	Host *SSHHostSpec `json:"host" yaml:"host"`
+
+	Credential *SSHCredentialSpec `json:"credential" yaml:"credential"`
+
+	// Command that fetch IP address
+	// for IPv4 it's `ip addr show dev <iface> | grep -oE 'inet ([^/]+)' | awk '{print $2}'`
+	// for IPv6 it's `ip -6 addr show dev <iface> | grep -oE 'inet6 ([^/]+)' | awk '{print $2}'`
+	Command *string `json:"command,omitempty" yaml:"command,omitempty"`
+
+	// Interface that fetch addresses from
+	Interface *string `json:"interface,omitempty" yaml:"interface,omitempty"`
+}
+
+func (spec *SSHDetectionSpec) Validate() error {
+	if spec.Host == nil {
+		return fmt.Errorf("host cannot be empty")
+	}
+
+	if err := spec.Host.Validate(); err != nil {
+		return err
+	}
+
+	if spec.Credential == nil {
+		return fmt.Errorf("credential cannot be empty")
+	}
+
+	if err := spec.Credential.Validate(); err != nil {
+		return err
+	}
+
+	if utils.IsEmpty(spec.Command) && utils.IsEmpty(spec.Interface) {
+		return fmt.Errorf("interface must be specified if command is not specified")
+	}
+	return nil
+}
+
 // IPAddressSelectorSpec defines how should we select an IP address from a set of IP addresses
 // If multiple address are found, the first one will be used
 type IPAddressSelectorSpec struct {
@@ -91,10 +188,16 @@ type IPAddressSelectorSpec struct {
 }
 
 func (spec *IPAddressSelectorSpec) GetIncludes() []*net.IPNet {
+	if len(spec.includes) == 0 {
+		return []*net.IPNet{}
+	}
 	return spec.includes
 }
 
 func (spec *IPAddressSelectorSpec) GetExcludes() []*net.IPNet {
+	if len(spec.excludes) == 0 {
+		return []*net.IPNet{}
+	}
 	return spec.excludes
 }
 
@@ -139,6 +242,8 @@ type AddressDetectionSpec struct {
 	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
 
 	API *ThirdPartyServiceSpec `json:"api,omitempty" yaml:"api,omitempty"`
+
+	SSH *SSHDetectionSpec `json:"ssh,omitempty" yaml:"ssh,omitempty"`
 }
 
 func (spec *AddressDetectionSpec) Validate() error {
@@ -154,6 +259,9 @@ func (spec *AddressDetectionSpec) Validate() error {
 	} else if spec.API != nil {
 		spec.detectionType = AddressDetectionThirdParty
 		return spec.API.Validate()
+	} else if spec.SSH != nil {
+		spec.detectionType = AddressDetectionSSH
+		return spec.SSH.Validate()
 	}
 	return fmt.Errorf("must specify a detection method")
 }

@@ -1,4 +1,4 @@
-package ip
+package detection
 
 import (
 	"net"
@@ -66,6 +66,15 @@ func TestAddressExcluded(t *testing.T) {
 				excludes: []*net.IPNet{
 					parseCidr("172.0.0.0/8"),
 				},
+			},
+			want: false,
+		},
+		{
+			name: "Included test #4",
+			args: args{
+				address:  net.ParseIP("192.168.1.1"),
+				includes: []*net.IPNet{},
+				excludes: []*net.IPNet{},
 			},
 			want: false,
 		},

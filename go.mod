@@ -17,6 +17,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.1073
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.1073
 	gopkg.in/yaml.v3 v3.0.1
+	golang.org/x/crypto v0.31.0
 )
 
 require (
@@ -56,7 +57,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	go.mongodb.org/mongo-driver v1.17.1 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
