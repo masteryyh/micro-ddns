@@ -38,6 +38,9 @@ jobs:
       - name: Initialize Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Pre-download requirements
+        run: go mod download
+
       - name: Build binary with tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
