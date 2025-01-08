@@ -49,7 +49,7 @@ jobs:
         with:
           push: true
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/riscv64
+          platforms: linux/amd64,linux/arm64,linux/riscv64
           tags: masteryyh/micro-ddns:experimental,masteryyh/micro-ddns:experimental-oracular
 
       - name: Build and push Alpine experimental image
@@ -58,7 +58,7 @@ jobs:
         with:
           push: true
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/riscv64
+          platforms: linux/amd64,linux/arm64,linux/riscv64
           file: Dockerfile.alpine
           tags: masteryyh/micro-ddns:experimental-alpine3.21
 
@@ -68,7 +68,7 @@ jobs:
         with:
           push: true
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/riscv64
+          platforms: linux/amd64,linux/arm64,linux/riscv64
           tags: masteryyh/micro-ddns:oracular,masteryyh/micro-ddns:${{ github.ref_name }}-oracular,masteryyh/micro-ddns:latest
 
       - name: Build and push Alpine image
@@ -77,6 +77,6 @@ jobs:
         with:
           push: true
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/riscv64
+          platforms: linux/amd64,linux/arm64,linux/riscv64
           file: Dockerfile.alpine
           tags: masteryyh/micro-ddns:alpine3.21,masteryyh/micro-ddns:${{ github.ref_name }}-alpine3.21,masteryyh/micro-ddns:alpine
