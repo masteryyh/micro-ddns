@@ -51,6 +51,16 @@ type ThirdPartyAddressDetector struct {
 func NewThirdPartyAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *ThirdPartyAddressDetector {
 	spec := detectionSpec.API
 
+	includes := []*net.IPNet{}
+	if detectionSpec.Selector != nil {
+		includes = detectionSpec.Selector.GetIncludes()
+	}
+
+	excludes := []*net.IPNet{}
+	if detectionSpec.Selector != nil {
+		excludes = detectionSpec.Selector.GetExcludes()
+	}
+
 	return &ThirdPartyAddressDetector{
 		url:      spec.URL,
 		jsonPath: utils.StringPtrToString(spec.JsonPath),
@@ -59,8 +69,8 @@ func NewThirdPartyAddressDetector(detectionSpec *config.AddressDetectionSpec, st
 		username: utils.StringPtrToString(spec.Username),
 		password: utils.StringPtrToString(spec.Password),
 		stack:    stack,
-		includes: detectionSpec.Selector.GetIncludes(),
-		excludes: detectionSpec.Selector.GetExcludes(),
+		includes: includes,
+		excludes: excludes,
 		logger:   logger,
 	}
 }
