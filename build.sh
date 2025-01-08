@@ -42,10 +42,18 @@ if [ -z "${GO_VERSION}" ]; then
     GO_VERSION="$(go version | awk '{print $3}')"
 fi
 
+if [ -z "${ARCH}" ]; then
+    ARCH="amd64,arm64,386,riscv64"
+fi
+
 LDFLAGS="-X 'github.com/masteryyh/micro-ddns/internal/version.Version=${VERSION}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.BuildTime=${BUILD_TIME}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.GoVersion=${GO_VERSION}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.CommitHash=$(get_commit_hash)'"
 
-compile "amd64" "$LDFLAGS"
-compile "arm64" "$LDFLAGS"
+IFS=', ' read -r -a archs <<< "$ARCH"
+
+for arch in "${archs[@]}"
+do
+    compile "$arch" "$LDFLAGS"
+done
