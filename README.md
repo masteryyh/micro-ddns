@@ -1,9 +1,11 @@
-## micro-ddns
+# micro-ddns
+
 micro-ddns is a tool that can update your DNS record
 dynamically based on current IP address, support multiple
 IP address detection methods and DNS providers.
 
 ## Quick Start
+
 ```yaml
 # /etc/micro-ddns/config.yaml
 ddns:
@@ -26,17 +28,18 @@ provider:
       apiToken: "<redacted>"
 ```
 
-```
-$ micro-ddns run --config /etc/micro-ddns/config.yaml
+```bash
+micro-ddns run --config /etc/micro-ddns/config.yaml
 ```
 
 OR you can run as a container:
 
-```
-$ docker run --name ddns -d -v /path/to/config.yaml:/etc/micro-ddns/config.yaml masteryyh/micro-ddns:alpine
+```bash
+docker run --name ddns -d -v /path/to/config.yaml:/etc/micro-ddns/config.yaml masteryyh/micro-ddns:alpine
 ```
 
 ## License
+
 This project is licensed under the Apache License 2.0. For more details, see the LICENSE file in the repository.
 
 Copyright (c) 2024 masteryyh
