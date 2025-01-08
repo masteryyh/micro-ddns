@@ -1,0 +1,14 @@
+[Unit]
+Description=micro-ddns is a dynamic DNS update tool
+Documentation=https://github.com/masteryyh/micro-ddns
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/micro-ddns run -c /etc/micro-ddns/config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

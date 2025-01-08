@@ -7,7 +7,7 @@ LABEL email="yyh991013@163.com"
 
 RUN apk add --no-cache ca-certificates curl
 
-COPY bin/micro-ddns-${TARGETARCH} /usr/local/bin/micro-ddns
+COPY bin/micro-ddns-linux-${TARGETARCH} /usr/local/bin/micro-ddns
 
 USER 1000:1000
 

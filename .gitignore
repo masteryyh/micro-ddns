@@ -38,3 +38,6 @@ config*.yaml
 
 # VSCode configurations
 .vscode
+
+# Output directory
+output/
