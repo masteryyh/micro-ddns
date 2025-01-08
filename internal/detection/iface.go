@@ -36,12 +36,21 @@ type IfaceAddressDetector struct {
 func NewIfaceAddressDetector(detectionSpec *config.AddressDetectionSpec, stack config.NetworkStack, logger *slog.Logger) *IfaceAddressDetector {
 	spec := detectionSpec.Interface
 
-	logger.Debug("watching network interface", "interface", spec.Name)
+	includes := []*net.IPNet{}
+	if detectionSpec.Selector != nil {
+		includes = detectionSpec.Selector.GetIncludes()
+	}
+
+	excludes := []*net.IPNet{}
+	if detectionSpec.Selector != nil {
+		excludes = detectionSpec.Selector.GetExcludes()
+	}
+
 	return &IfaceAddressDetector{
 		interfaceName: spec.Name,
 		stack:         stack,
-		includes:      detectionSpec.Selector.GetIncludes(),
-		excludes:      detectionSpec.Selector.GetExcludes(),
+		includes:      includes,
+		excludes:      excludes,
 		logger:        logger,
 	}
 }

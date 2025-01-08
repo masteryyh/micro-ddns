@@ -237,7 +237,7 @@ type AddressDetectionSpec struct {
 
 	detectionType AddressDetectionType
 
-	Selector *IPAddressSelectorSpec `json:"selection,omitempty" yaml:"selection,omitempty"`
+	Selector *IPAddressSelectorSpec `json:"selector,omitempty" yaml:"selector,omitempty"`
 
 	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
 
