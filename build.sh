@@ -23,11 +23,16 @@ get_build_time() {
 }
 
 compile() {
-    local goarch=$1
-    local ldflags=$2
+    local os=$1
+    local arch=$2
+    local ldflags=$3
 
-    echo "Compiling for arch $goarch..."
-    GOOS=linux GOARCH=$goarch go build -ldflags="${ldflags}" -o "bin/micro-ddns-${goarch}" cmd/main.go
+    echo "Compiling for arch $arch... of OS $os"
+    local binary="bin/micro-ddns-${os}-${arch}"
+    if [ "$os" == "windows" ]; then
+        binary="${binary}.exe"
+    fi
+    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="${ldflags}" -o "$binary" cmd/main.go
 }
 
 if [ -z "${VERSION}" ]; then
@@ -42,8 +47,8 @@ if [ -z "${GO_VERSION}" ]; then
     GO_VERSION="$(go version | awk '{print $3}')"
 fi
 
-if [ -z "${ARCH}" ]; then
-    ARCH="amd64,arm64,riscv64"
+if [ -z "${PLATFORMS}" ]; then
+    PLATFORMS="$(go tool dist list | grep 'linux\|windows\|freebsd\|darwin' | tr '\n' ',' | sed 's/,$//')"
 fi
 
 LDFLAGS="-X 'github.com/masteryyh/micro-ddns/internal/version.Version=${VERSION}'"
@@ -51,9 +56,10 @@ LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.BuildTi
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.GoVersion=${GO_VERSION}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/masteryyh/micro-ddns/internal/version.CommitHash=$(get_commit_hash)'"
 
-IFS=', ' read -r -a archs <<< "$ARCH"
-
-for arch in "${archs[@]}"
+IFS=',' read -r -a platforms <<< "$PLATFORMS"
+for platform in "${platforms[@]}"
 do
-    compile "$arch" "$LDFLAGS"
+    IFS='/' read -r -a os_arch <<< "$platform"
+    compile "${os_arch[0]}" "${os_arch[1]}" "$LDFLAGS" &
 done
+wait

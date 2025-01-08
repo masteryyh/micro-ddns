@@ -35,7 +35,7 @@ jobs:
       - name: Build repository
         shell: bash
         run: |
-          ARCH=amd64 ./build.sh
+          PLATFORMS=linux/amd64 ./build.sh
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
