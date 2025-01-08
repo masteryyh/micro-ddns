@@ -33,8 +33,7 @@ var (
 		Short: "A simple tool to update DNS dynamically",
 		Long: `A simple tool to update DNS dynamically if you want to create DNS records
 for hosts that IP address might changes. Support multiple DNS providers.
-
-Still under construction. ;)`,
+`,
 	}
 )
 

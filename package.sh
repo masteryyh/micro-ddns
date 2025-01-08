@@ -8,9 +8,9 @@ create_package() {
     local version=$3
 
     echo "Packing for OS $os and arch $arch..."
-    local path="output/$os/$arch"
+    local path="output/micro-ddns-$os-$arch"
     if [ ! -d "$path" ]; then
-        mkdir -p "output/$os/$arch"
+        mkdir -p "$path"
     fi
 
     local binary="bin/micro-ddns-${os}-${arch}"
@@ -33,7 +33,7 @@ create_package() {
     fi
 
     local tar_name="output/micro-ddns-${os}-${arch}-$version.tar.gz"
-    tar -czf "$tar_name" "output/$os/$arch"
+    tar -czf "$tar_name" -C "$path" .
     sha256sum "$tar_name" > "$tar_name.sha256"
 }
 
@@ -53,3 +53,5 @@ do
     create_package "${os_arch[0]}" "${os_arch[1]}" "$VERSION" &
 done
 wait
+
+rm -rf output/*/
