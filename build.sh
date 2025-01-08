@@ -43,7 +43,7 @@ if [ -z "${GO_VERSION}" ]; then
 fi
 
 if [ -z "${ARCH}" ]; then
-    ARCH="amd64,arm64,386,riscv64"
+    ARCH="amd64,arm64,riscv64"
 fi
 
 LDFLAGS="-X 'github.com/masteryyh/micro-ddns/internal/version.Version=${VERSION}'"
