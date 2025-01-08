@@ -18,6 +18,7 @@ package detection
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"strings"
@@ -90,13 +91,12 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 		validAddresses = append(validAddresses, ip)
 	}
 
-	var selected []string
 	for _, valid := range validAddresses {
-		if AddressExcluded(valid, d.includes, d.excludes) {
-			selected = append(selected, valid.String())
+		if !AddressExcluded(valid, d.includes, d.excludes) {
+			return valid.String(), nil
 		}
 	}
-	return selected[0], nil
+	return "", errors.New("no valid address found")
 }
 
 func (d *IfaceAddressDetector) Detect(_ context.Context) (string, error) {
