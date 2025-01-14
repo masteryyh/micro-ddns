@@ -35,6 +35,7 @@ create_package() {
     local tar_name="output/micro-ddns-${os}-${arch}-$version.tar.gz"
     tar -czf "$tar_name" -C "$path" .
     sha256sum "$tar_name" > "$tar_name.sha256"
+    gpg --detach-sign --armor "$tar_name"
 }
 
 if [ -z "${VERSION}" ]; then
