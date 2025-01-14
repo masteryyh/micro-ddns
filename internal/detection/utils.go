@@ -54,7 +54,7 @@ func IsValidV6(address string) net.IP {
 	return validateAddress(address)
 }
 
-func AddressExcluded(address net.IP, includes []*net.IPNet, excludes []*net.IPNet) bool {
+func addressExcluded(address net.IP, includes []*net.IPNet, excludes []*net.IPNet) bool {
 	if len(includes) == 0 && len(excludes) == 0 {
 		return false
 	}

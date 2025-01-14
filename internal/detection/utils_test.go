@@ -139,7 +139,7 @@ func TestAddressExcluded(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := AddressExcluded(tt.args.address, tt.args.includes, tt.args.excludes); got != tt.want {
+			if got := addressExcluded(tt.args.address, tt.args.includes, tt.args.excludes); got != tt.want {
 				t.Errorf("AddressExcluded() = %v, want %v", got, tt.want)
 			}
 		})

@@ -174,7 +174,7 @@ func (d *ThirdPartyAddressDetector) detectV4(parentCtx context.Context) (string,
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if !AddressExcluded(ip, d.includes, d.excludes) {
+	if addressExcluded(ip, d.includes, d.excludes) {
 		return "", fmt.Errorf("excluded address: %s", val)
 	}
 
@@ -192,7 +192,7 @@ func (d *ThirdPartyAddressDetector) detectV6(parentCtx context.Context) (string,
 		return "", fmt.Errorf("invalid address: %s", val)
 	}
 
-	if !AddressExcluded(ip, d.includes, d.excludes) {
+	if addressExcluded(ip, d.includes, d.excludes) {
 		return "", fmt.Errorf("excluded address: %s", val)
 	}
 

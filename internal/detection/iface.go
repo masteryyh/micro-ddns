@@ -92,7 +92,7 @@ func (d *IfaceAddressDetector) detect(v4 bool) (string, error) {
 	}
 
 	for _, valid := range validAddresses {
-		if !AddressExcluded(valid, d.includes, d.excludes) {
+		if !addressExcluded(valid, d.includes, d.excludes) {
 			return valid.String(), nil
 		}
 	}

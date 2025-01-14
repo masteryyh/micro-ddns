@@ -158,7 +158,7 @@ func (d *SSHAddressDetector) Detect(ctx context.Context) (string, error) {
 			ip = IsValidV6(addr)
 		}
 
-		if ip != nil && !AddressExcluded(ip, d.includes, d.excludes) {
+		if ip != nil && !addressExcluded(ip, d.includes, d.excludes) {
 			d.logger.Debug("valid address found", "address", addr)
 			return addr, nil
 		}
