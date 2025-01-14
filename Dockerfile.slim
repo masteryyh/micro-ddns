@@ -1,0 +1,13 @@
+FROM gcr.io/distroless/static-debian12:nonroot
+
+ARG TARGETARCH
+
+LABEL author=masteryyh
+LABEL email="yyh991013@163.com"
+
+COPY bin/micro-ddns-linux-${TARGETARCH} /usr/local/bin/micro-ddns
+
+USER 1000:1000
+
+ENTRYPOINT ["/usr/local/bin/micro-ddns"]
+CMD ["run"]
