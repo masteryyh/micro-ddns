@@ -34,7 +34,9 @@ type DDNSInstanceManager struct {
 	wg        *sync.WaitGroup
 }
 
-func NewDDNSInstanceManager(specs []*config.DDNSSpec, scheduler gocron.Scheduler, logger *slog.Logger, wg *sync.WaitGroup) (*DDNSInstanceManager, error) {
+func NewDDNSInstanceManager(scheduler gocron.Scheduler, logger *slog.Logger, wg *sync.WaitGroup) (*DDNSInstanceManager, error) {
+	specs := config.GetConfig().DDNS
+
 	instances := make(map[string]*DDNSInstance, len(specs))
 	for _, spec := range specs {
 		if _, ok := instances[spec.Name]; ok {

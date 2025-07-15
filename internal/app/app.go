@@ -18,10 +18,11 @@ package app
 
 import (
 	"fmt"
-	"github.com/masteryyh/micro-ddns/pkg/signal"
 	"log/slog"
 	"os"
 	"sync"
+
+	"github.com/masteryyh/micro-ddns/pkg/signal"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/masteryyh/micro-ddns/internal/config"
@@ -55,8 +56,7 @@ func NewApp(logLevel int, configFile string) (*App, error) {
 	}
 
 	logger.Info("reading config file from " + configFile)
-	configs, err := config.ReadConfigOrGet(configFile)
-	if err != nil {
+	if err := config.InitializeConfig(configFile); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func NewApp(logLevel int, configFile string) (*App, error) {
 
 	var wg sync.WaitGroup
 
-	manager, err := ddns.NewDDNSInstanceManager(configs.DDNS, scheduler, logger, &wg)
+	manager, err := ddns.NewDDNSInstanceManager(scheduler, logger, &wg)
 	if err != nil {
 		return nil, err
 	}

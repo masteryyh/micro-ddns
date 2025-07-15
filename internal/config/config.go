@@ -17,19 +17,17 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 var (
-	config Config
-
+	globalConfig   *Config
+	configOnce     sync.Once
 	domainRegex    = regexp.MustCompile(`^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$`)
 	subdomainRegex = regexp.MustCompile(`^([a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)|([a-zA-Z0-9]*@[a-zA-Z0-9]*)$`)
 )
@@ -55,25 +53,25 @@ const (
 // DDNSSpec is the specification of DDNS service
 type DDNSSpec struct {
 	// Name is the name of the specification
-	Name string `json:"name" yaml:"name"`
+	Name string `mapstructure:"name"`
 
 	// Domain is the domain of user
-	Domain string `json:"domain" yaml:"domain"`
+	Domain string `mapstructure:"domain"`
 
 	// Subdomain is the subdomain to update, use "@" if no subdomain is used
-	Subdomain string `json:"subdomain" yaml:"subdomain"`
+	Subdomain string `mapstructure:"subdomain"`
 
 	// Stack determines if IPv4 or IPv6 is used
-	Stack NetworkStack `json:"stack" yaml:"stack"`
+	Stack NetworkStack `mapstructure:"stack"`
 
 	// Cron is the cron expression about how should we schedule this task
-	Cron string `json:"cron" yaml:"cron"`
+	Cron string `mapstructure:"cron"`
 
 	// ProviderRef is the name of the DNS provider specification defined by user
-	ProviderRef string `json:"providerRef" yaml:"providerRef"`
+	ProviderRef string `mapstructure:"providerRef"`
 
 	// DetectionRef is the name of the address detection specification defined by user
-	DetectionRef string `json:"detectionRef" yaml:"detectionRef"`
+	DetectionRef string `mapstructure:"detectionRef"`
 
 	detectionSpec *AddressDetectionSpec
 
@@ -135,11 +133,9 @@ func (spec *DDNSSpec) GetProviderSpec() *DNSProviderSpec {
 
 // Config is the configuration of this application
 type Config struct {
-	DDNS []*DDNSSpec `json:"ddns" yaml:"ddns"`
-
-	Detection []*AddressDetectionSpec `json:"detection" yaml:"detection"`
-
-	Provider []*DNSProviderSpec `json:"provider" yaml:"provider"`
+	DDNS      []*DDNSSpec             `mapstructure:"ddns"`
+	Detection []*AddressDetectionSpec `mapstructure:"detection"`
+	Provider  []*DNSProviderSpec      `mapstructure:"provider"`
 }
 
 func (c *Config) Validate() error {
@@ -236,43 +232,42 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func ReadConfigOrGet(path string) (*Config, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
+// InitializeConfig reads configuration from the specified file path
+// Enhanced with viper for environment variable support
+func InitializeConfig(path string) error {
+	var err error
+	configOnce.Do(func() {
+		v := viper.New()
 
-	if info.IsDir() {
-		return nil, fmt.Errorf("config path points to a directory")
-	}
+		v.SetConfigFile(path)
 
-	parts := strings.Split(path, ".")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("config path points to an unknown file type")
-	}
+		v.SetEnvPrefix("MICRO_DDNS")
+		v.AutomaticEnv()
+		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	fileType := parts[len(parts)-1]
-	switch fileType {
-	case "yaml", "yml":
-		if err := yaml.Unmarshal(content, &config); err != nil {
-			return nil, err
+		if readErr := v.ReadInConfig(); readErr != nil {
+			err = fmt.Errorf("failed to read config file: %w", readErr)
+			return
 		}
-	case "json":
-		if err := json.Unmarshal(content, &config); err != nil {
-			return nil, err
+
+		var config Config
+		if marshalErr := v.Unmarshal(&config); marshalErr != nil {
+			err = fmt.Errorf("failed to unmarshal config: %w", marshalErr)
+			return
 		}
-	default:
-		return nil, fmt.Errorf("config path points to an unknown file type")
-	}
 
-	if err := config.Validate(); err != nil {
-		return nil, err
-	}
+		if validateErr := config.Validate(); validateErr != nil {
+			err = fmt.Errorf("invalid config: %w", validateErr)
+			return
+		}
+		globalConfig = &config
+	})
+	return err
+}
 
-	return &config, nil
+func GetConfig() *Config {
+	if globalConfig == nil {
+		panic("config not initialized, call InitializeConfig first")
+	}
+	return globalConfig
 }

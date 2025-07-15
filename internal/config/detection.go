@@ -35,7 +35,7 @@ const (
 // By default the first address detected will be used
 type NetworkInterfaceDetectionSpec struct {
 	// Name is the name of interface
-	Name string `json:"name" yaml:"name"`
+	Name string `mapstructure:"name"`
 }
 
 func (spec *NetworkInterfaceDetectionSpec) Validate() error {
@@ -48,22 +48,22 @@ func (spec *NetworkInterfaceDetectionSpec) Validate() error {
 // ThirdPartyServiceSpec defines how should we access third party API to get our IP address
 type ThirdPartyServiceSpec struct {
 	// URL is the URL of third-party API
-	URL string `json:"url" yaml:"url"`
+	URL string `mapstructure:"url"`
 
 	// JsonPath is the path to the address if data returned by API is JSON-formatted
-	JsonPath *string `json:"jsonPath,omitempty" yaml:"jsonPath,omitempty"`
+	JsonPath *string `mapstructure:"jsonPath,omitempty"`
 
 	// Params will be added to the URL
-	Params *map[string]string `json:"params,omitempty" yaml:"params,omitempty"`
+	Params *map[string]string `mapstructure:"params,omitempty"`
 
 	// Headers will be added to the request header if not empty
-	Headers *map[string]string `json:"customHeaders,omitempty" yaml:"customHeaders,omitempty"`
+	Headers *map[string]string `mapstructure:"customHeaders,omitempty"`
 
 	// Username is the username for HTTP basic authentication if required
-	Username *string `json:"username,omitempty" yaml:"username,omitempty"`
+	Username *string `mapstructure:"username,omitempty"`
 
 	// Password is the password for HTTP basic authentication if required
-	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
+	Password *string `mapstructure:"password,omitempty"`
 }
 
 func (spec *ThirdPartyServiceSpec) Validate() error {
@@ -81,10 +81,10 @@ func (spec *ThirdPartyServiceSpec) Validate() error {
 // SSHHostSpec is the specification of remote SSH host
 type SSHHostSpec struct {
 	// Address of remote host
-	Address string `json:"address" yaml:"address"`
+	Address string `mapstructure:"address"`
 
 	// Port of remote host, default is 22
-	Port *uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+	Port *uint16 `mapstructure:"port,omitempty"`
 }
 
 func (spec *SSHHostSpec) Validate() error {
@@ -106,16 +106,16 @@ func (spec *SSHHostSpec) Validate() error {
 // SSHCredentialSpec is the credential used to connect to remote SSH host
 type SSHCredentialSpec struct {
 	// User that connect to the host
-	User string `json:"user" yaml:"user"`
+	User string `mapstructure:"user"`
 
 	// Password of remote host, unsafe since it's trasmitted in plaintext
-	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
+	Password *string `mapstructure:"password,omitempty"`
 
 	// PrivateKey for SSH authentication, recommended
-	PrivateKey *string `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	PrivateKey *string `mapstructure:"privateKey,omitempty"`
 
 	// Passphrase for private key if it's encrypted
-	Passphrase *string `json:"passphrase,omitempty" yaml:"passphrase,omitempty"`
+	Passphrase *string `mapstructure:"passphrase,omitempty"`
 }
 
 func (spec *SSHCredentialSpec) Validate() error {
@@ -136,17 +136,17 @@ func (spec *SSHCredentialSpec) Validate() error {
 
 // SSHDetectionSpec defines how should we connect to remote machine and fetch IP address using SSH
 type SSHDetectionSpec struct {
-	Host *SSHHostSpec `json:"host" yaml:"host"`
+	Host *SSHHostSpec `mapstructure:"host"`
 
-	Credential *SSHCredentialSpec `json:"credential" yaml:"credential"`
+	Credential *SSHCredentialSpec `mapstructure:"credential"`
 
 	// Command that fetch IP address
 	// for IPv4 it's `ip addr show dev <iface> | grep -oE 'inet ([^/]+)' | awk '{print $2}'`
 	// for IPv6 it's `ip -6 addr show dev <iface> | grep -oE 'inet6 ([^/]+)' | awk '{print $2}'`
-	Command *string `json:"command,omitempty" yaml:"command,omitempty"`
+	Command *string `mapstructure:"command,omitempty"`
 
 	// Interface that fetch addresses from
-	Interface *string `json:"interface,omitempty" yaml:"interface,omitempty"`
+	Interface *string `mapstructure:"interface,omitempty"`
 }
 
 func (spec *SSHDetectionSpec) Validate() error {
@@ -177,10 +177,10 @@ func (spec *SSHDetectionSpec) Validate() error {
 type IPAddressSelectorSpec struct {
 	// IncludeCIDRs is the list of CIDRs that should be included
 	// If address is in one of these CIDRs, it will be selected
-	IncludeCIDRs []string `json:"includeCIDRs,omitempty" yaml:"includeCIDRs,omitempty"`
+	IncludeCIDRs []string `mapstructure:"includeCIDRs,omitempty"`
 
 	// ExcludeCIDRs is the list of CIDRs that should be excluded
-	ExcludeCIDRs []string `json:"excludeCIDRs,omitempty" yaml:"excludeCIDRs,omitempty"`
+	ExcludeCIDRs []string `mapstructure:"excludeCIDRs,omitempty"`
 
 	includes []*net.IPNet
 
@@ -233,17 +233,17 @@ func (spec *IPAddressSelectorSpec) Validate() error {
 // AddressDetectionSpec defines how should we detect current IP address
 type AddressDetectionSpec struct {
 	// Name of this address detection specification
-	Name string `json:"name" yaml:"name"`
+	Name string `mapstructure:"name"`
 
 	detectionType AddressDetectionType
 
-	Selector *IPAddressSelectorSpec `json:"selector,omitempty" yaml:"selector,omitempty"`
+	Selector *IPAddressSelectorSpec `mapstructure:"selector,omitempty"`
 
-	Interface *NetworkInterfaceDetectionSpec `json:"interface,omitempty" yaml:"interface,omitempty"`
+	Interface *NetworkInterfaceDetectionSpec `mapstructure:"interface,omitempty"`
 
-	API *ThirdPartyServiceSpec `json:"api,omitempty" yaml:"api,omitempty"`
+	API *ThirdPartyServiceSpec `mapstructure:"api,omitempty"`
 
-	SSH *SSHDetectionSpec `json:"ssh,omitempty" yaml:"ssh,omitempty"`
+	SSH *SSHDetectionSpec `mapstructure:"ssh,omitempty"`
 }
 
 func (spec *AddressDetectionSpec) Validate() error {
