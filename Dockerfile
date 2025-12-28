@@ -1,4 +1,4 @@
-FROM ubuntu:oracular
+FROM ubuntu:noble
 
 ARG TARGETARCH
 
