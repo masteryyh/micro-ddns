@@ -3,19 +3,22 @@
 set -e
 
 get_commit_hash() {
-    local hash=$(git rev-parse HEAD)
+    local hash
+    hash=$(git rev-parse HEAD)
 
-    local dirty=$(git status --porcelain)
+    local dirty
+    dirty=$(git status --porcelain)
     if [ -n "${dirty}" ]; then
-        local hash_short=$(echo $hash | cut -c 1-6)
+        local hash_short
+        hash_short=$(echo "$hash" | cut -c 1-6)
         echo "${hash_short}-dirty"
+    else
+        echo "$hash"
     fi
-    echo $hash
 }
 
 get_build_time() {
-    cat /etc/os-release | grep -q "alpine"
-    if [ $? -eq 0 ]; then
+    if grep -q "alpine" /etc/os-release; then
         date -Iseconds
     else
         date --iso=seconds

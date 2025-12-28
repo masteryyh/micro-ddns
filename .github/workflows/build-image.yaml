@@ -107,7 +107,7 @@ jobs:
           cosign sign -y masteryyh/micro-ddns@${{ steps.build-alpine-exp.outputs.digest }}
         env:
           COSIGN_EXPERIMENTAL: "true"
-      
+
       - name: Build and push slim experimental image
         if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
         id: build-slim-exp
@@ -118,7 +118,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           file: Dockerfile.slim
           tags: masteryyh/micro-ddns:experimental-slim
-      
+
       - name: Sign slim experimental image
         if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
         run: |
