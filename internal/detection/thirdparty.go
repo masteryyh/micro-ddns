@@ -118,7 +118,7 @@ func (d *ThirdPartyAddressDetector) requestAddress(parentCtx context.Context) (s
 	}
 
 	d.logger.Debug("use body as address directly", "body", body)
-	return string(body), nil
+	return strings.TrimSpace(string(body)), nil
 }
 
 func (d *ThirdPartyAddressDetector) extractIP(parentCtx context.Context, response []byte, jsonpath string) (string, error) {
